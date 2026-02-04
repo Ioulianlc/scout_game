@@ -15,6 +15,14 @@ export class Inputs {
         // Écouteurs d'événements
         window.addEventListener('keydown', (e) => this.onKeyDown(e));
         window.addEventListener('keyup', (e) => this.onKeyUp(e));
+        window.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') this.keys.enter = true;
+                // ... reste du code
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') this.keys.enter = false;
+            });
     }
 
     onKeyDown(event) {

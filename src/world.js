@@ -3,90 +3,79 @@ import * as THREE from 'three';
 export class World {
     constructor(scene) {
         this.scene = scene;
-        
-        // Tableaux de stockage
-        this.colliders = []; // Zones physiques (Murs, Rivières) [2]
-        this.npcs = [];      // Personnages non-joueurs (Animaux)
+        this.colliders = []; 
+        this.npcs = [];      
 
-        // Initialisation du contenu
         this.initLevel();
         this.initNPCs();
     }
 
-    // --- GESTION DU DÉCOR ---
     initLevel() {
-    const loader = new THREE.TextureLoader();
+        const loader = new THREE.TextureLoader();
+        const mapW = 6144 / 32; 
+        const mapH = 3104 / 32; 
 
-    // 1. CHARGEMENT DE LA MAP (Le "Tapis")
-    // Remplace le chemin par le vrai chemin vers ton image
-   loader.load('./src/assets/map.png',(texture) => {
-    texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
+        loader.load('./src/assets/map.png', (texture) => {
+            texture.magFilter = THREE.NearestFilter;
+            const geometry = new THREE.PlaneGeometry(mapW, mapH);
+            const material = new THREE.MeshBasicMaterial({ map: texture });
+            const mapMesh = new THREE.Mesh(geometry, material);
+            this.scene.add(mapMesh);
+        });
 
-        const mapGeometry = new THREE.PlaneGeometry(20, 12); // Ajuste la taille selon tes besoins
-        const mapMaterial = new THREE.MeshBasicMaterial({ map: texture });
-        const mapMesh = new THREE.Mesh(mapGeometry, mapMaterial);
-        
-        // Z=0 : La map est tout au fond
-        mapMesh.position.set(0, 0, 0); 
-        this.scene.add(mapMesh);
-    });
-
-    // 2. AJOUT DES COLLISIONS (Basé sur ton dessin)
-    // On définit des zones où le Scout ne peut pas passer
-    
-    // Exemple : Le Labyrinthe (en haut à gauche)
-    this.addCollider(-7, 3, 5, 5); 
-
-    // Exemple : La Rivière (zone bleue à droite)
-    this.addCollider(6, -2, 4, 8); 
-
-    // Exemple : Le contour du campement (en haut au centre)
-    this.addCollider(0, 5, 4, 1); 
-}
-    // --- GESTION DES PNJS ---
-    initNPCs() {
-        // Ajout des 6 animaux avec leurs positions et dialogues
-        this.addNPC('Renard', 2, 0, "Merci d'avoir éteint le feu !");
-        this.addNPC('Lapin', -3, 1, "Attention, ça brûle par là-bas !");
-        // Vous pourrez ajouter les autres ici...
+        // Tes collisions existantes
+        this.addCollider(-7, 3, 5, 5); 
+        this.addCollider(6, -2, 4, 8); 
+        this.addCollider(0, 5, 4, 1); 
     }
 
-    // --- MÉTHODES UTILITAIRES ---
+    initNPCs() {
+        // --- AJOUT DES ANIMAUX AVEC LE FORMAT NARRATIF ---
+        
+        this.addNPC(
+            'Renard', 
+            2, 0, 
+            ['./src/assets/renard_zoom.png', 'Merci d\'avoir éteint le feu !', 'Tu es un vrai héros.']
+        );
+
+        this.addNPC(
+            'Lapin', 
+            -3, 1, 
+            ['./src/assets/lapin_zoom.png', 'Attention, ça brûle par là-bas !', 'Vite, va chercher de l\'aide !']
+        );
+    }
 
     addCollider(x, y, w, h) {
         const box = new THREE.Box3();
-        // On définit la zone interdite
         box.setFromCenterAndSize(
             new THREE.Vector3(x, y, 0),
-            new THREE.Vector3(w, h, 1) // Profondeur 1 pour être sûr d'intercepter le joueur
+            new THREE.Vector3(w, h, 1)
         );
         this.colliders.push(box);
-        
-        // DEBUG : Visualiser les zones de collision (très utile !)
-        // const helper = new THREE.Box3Helper(box, 0xffff00);
-        // this.scene.add(helper);
     }
 
-    addNPC(name, x, y, dialogue) {
-        // 1. Visuel (En attendant les sprites de Julie, on met un carré de couleur)
-        // Idéalement, chargez une texture ici comme pour la maison
+    /**
+     * @param {string} name - Nom de l'animal
+     * @param {number} x - Position X
+     * @param {number} y - Position Y
+     * @param {Array} dialogueData - [PortraitURL, Phrase1, Phrase2, ...]
+     */
+    addNPC(name, x, y, dialogueData) {
         const geometry = new THREE.PlaneGeometry(1, 1);
-        const material = new THREE.MeshBasicMaterial({ 
-            color: 0xffa500 // Orange pour le renard par défaut
-        }); 
-        
+        const material = new THREE.MeshBasicMaterial({ color: 0xffa500 }); 
         const mesh = new THREE.Mesh(geometry, material);
-        
-        // IMPORTANT : Z=0.9 pour être affiché devant le sol mais derrière le Scout (qui est à Z=1)
         mesh.position.set(x, y, 0.9); 
         this.scene.add(mesh);
 
-        // 2. Logique
+        // EXTRACTION DES DONNÉES
+        const portraitUrl = dialogueData[0];
+        const phrasesUniquement = dialogueData.slice(1); // On prend tout sauf le premier élément
+
         this.npcs.push({
             name: name,
-            position: mesh.position, // On lie la position logique au visuel
-            dialogue: dialogue,
+            position: mesh.position,
+            portrait: portraitUrl,    // Pour l'image en gros plan
+            phrases: phrasesUniquement, // Le tableau de phrases pour le défilement
             mesh: mesh
         });
     }
