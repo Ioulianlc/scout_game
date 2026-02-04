@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { Scout } from "./scout.js";
 import { World } from "./world.js";
 import { Inputs } from "./inputs.js";
+import { LightSystem } from "./lightSystem.js";
+import { VegetationGenerator } from "./vegetation.js";
 
 class Game {
   constructor() {
@@ -10,7 +12,7 @@ class Game {
       canvas: this.canvas,
       alpha: true,
     });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    // On ne définit pas la taille ici, handleResize s'en chargera
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     this.scene = new THREE.Scene();
@@ -19,22 +21,40 @@ class Game {
     this.setupCamera();
 
     this.inputs = new Inputs();
-    // Attention : j'ai remis this.camera ici car ton World en a besoin pour l'outil de construction
+    
     this.world = new World(this.scene, this.camera); 
     this.scout = new Scout(this.scene);
+
+    // --- GÉNÉRATION D'ARBRES ---
+  const vegetation = new VegetationGenerator(this.scene, this.world);
+
+    // Utilise ton curseur rouge pour trouver une zone vide sur ta map !
+    // Exemple : Zone à gauche (X: -80 à -20, Y: -40 à 40), 50 arbres
+    vegetation.generateZone(-42, 34, -55, -6, 200);
+    vegetation.generateZone(-10, 42, 39, 10, 60);
+    vegetation.generateZone(-17, 48, 56, 40, 43);
+
+    // --- SYSTÈME DE LUMIÈRE ---
+    this.lightSystem = new LightSystem(this.scene);
+
+    // --- ZONE DU LABYRINTHE ---
+    this.mazeZone = {
+        minX: -95,  
+        maxX: -52,  
+        minY: -1,  
+        maxY: 30   
+    };
 
     // --- VARIABLES DE DIALOGUE ---
     this.isPaused = false;
     this.currentNPC = null;
     this.dialogueIndex = 0;
-// test
-    // --- 1. NOUVEAU : Récupération de l'affichage DEBUG ---
-    this.coordDisplay = document.getElementById("debug-coords");
 
-    // --- 2. NOUVEAU : Touche F3 pour Cacher/Afficher ---
+    // --- DEBUG HUD ---
+    this.coordDisplay = document.getElementById("debug-coords");
     window.addEventListener('keydown', (e) => {
         if (e.code === 'F3') {
-            e.preventDefault(); // Empêche l'action par défaut du navigateur
+            e.preventDefault();
             if (this.coordDisplay) {
                 this.coordDisplay.style.display = 
                     this.coordDisplay.style.display === 'none' ? 'block' : 'none';
@@ -42,23 +62,42 @@ class Game {
         }
     });
 
+    // --- GESTION DU REDIMENSIONNEMENT (Anti-Étirement) ---
+    // C'est cette ligne qui manquait pour garder les bonnes proportions !
+    window.addEventListener('resize', () => this.handleResize());
+
     this.clock = new THREE.Clock();
     this.loop();
   }
 
   setupCamera() {
-    const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 10; // J'ai remis 10 (zoom standard) car 100 dézoome énormément
-    this.camera = new THREE.OrthographicCamera(
-      (-frustumSize * aspect) / 2,
-      (frustumSize * aspect) / 2,
-      frustumSize / 2,
-      -frustumSize / 2,
-      0.1,
-      100
-    );
+    this.frustumSize = 100; // Zoom standard
+    
+    // On crée une caméra vide, elle sera configurée par handleResize
+    this.camera = new THREE.OrthographicCamera(0, 0, 0, 0, 0.1, 100);
     this.camera.position.set(0, 0, 10);
     this.camera.lookAt(0, 0, 0);
+
+    // On force le calcul des proportions dès le démarrage
+    this.handleResize();
+  }
+
+  handleResize() {
+    // 1. Calcul du ratio de l'écran (Largeur / Hauteur)
+    const aspect = window.innerWidth / window.innerHeight;
+
+    // 2. Mise à jour des bordures de la caméra pour respecter ce ratio
+    // Cela empêche l'étirement : si l'écran est large, on voit plus sur les côtés.
+    this.camera.left = (-this.frustumSize * aspect) / 2;
+    this.camera.right = (this.frustumSize * aspect) / 2;
+    this.camera.top = this.frustumSize / 2;
+    this.camera.bottom = -this.frustumSize / 2;
+
+    // 3. Application des changements
+    this.camera.updateProjectionMatrix();
+
+    // 4. Redimensionnement du rendu
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
   loop() {
@@ -69,26 +108,63 @@ class Game {
   }
 
   update(deltaTime) {
-    // 1. Détection de proximité constante
     this.checkProximity();
 
-    // 2. Mise à jour du Scout (uniquement si pas en pause)
     if (!this.isPaused) {
       this.scout.update(deltaTime, this.inputs, this.world.colliders);
 
-      // La caméra suit le personnage (avec effet fluide Lerp)
-      this.camera.position.x += (this.scout.mesh.position.x - this.camera.position.x) * 5 * deltaTime;
-      this.camera.position.y += (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
+      // --- 1. MOUVEMENT FLUIDE ---
+      let targetX = this.camera.position.x + (this.scout.mesh.position.x - this.camera.position.x) * 5 * deltaTime;
+      let targetY = this.camera.position.y + (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
 
-      // --- 3. NOUVEAU : Mise à jour du texte X et Y ---
-      if (this.coordDisplay) {
-          const x = this.scout.mesh.position.x.toFixed(1);
-          const y = this.scout.mesh.position.y.toFixed(1);
-          this.coordDisplay.innerText = `X: ${x} | Y: ${y}`;
+      // --- 2. BLOCAGE CAMÉRA (Clamping) ---
+      // On recalcule l'aspect ratio pour savoir exactement quoi bloquer
+      const aspect = window.innerWidth / window.innerHeight;
+      
+      const camHalfHeight = this.frustumSize / 2; // = 5
+      const camHalfWidth = (this.frustumSize * aspect) / 2;
+
+      // Limites basées sur ta map (192x112 -> demi-taille 96x56)
+      const limitX = 96 - camHalfWidth; 
+      const limitY = 56 - camHalfHeight;
+
+      // Si l'écran est plus petit que la map, on clamp. Sinon on centre (0).
+      if (limitX > 0) {
+          this.camera.position.x = THREE.MathUtils.clamp(targetX, -limitX, limitX);
+      } else {
+          this.camera.position.x = 0; 
       }
-    }
 
-    // 3. Touche Interaction (E)
+      if (limitY > 0) {
+          this.camera.position.y = THREE.MathUtils.clamp(targetY, -limitY, limitY);
+      } else {
+          this.camera.position.y = 0;
+      }
+
+      // --- LOGIQUE NUIT / LABYRINTHE ---
+      const px = this.scout.mesh.position.x;
+      const py = this.scout.mesh.position.y;
+
+      const isInMaze = (
+          px >= this.mazeZone.minX && 
+          px <= this.mazeZone.maxX && 
+          py >= this.mazeZone.minY && 
+          py <= this.mazeZone.maxY
+      );
+
+      if (isInMaze) {
+          this.lightSystem.enable(); 
+          this.lightSystem.update(this.scout.mesh.position);
+      } else {
+          this.lightSystem.disable();
+      }
+
+      if (this.coordDisplay) {
+          this.coordDisplay.innerText = `X: ${px.toFixed(1)} | Y: ${py.toFixed(1)}`;
+      }
+    }   
+
+    // Gestion des dialogues
     if (this.inputs.keys.interact) {
       if (!this.isPaused && this.nearestNPC) {
         this.startDialogue(this.nearestNPC);
@@ -96,14 +172,13 @@ class Game {
       this.inputs.keys.interact = false;
     }
 
-    // 4. Touche Suivant (Entrée)
     if (this.inputs.keys.enter && this.isPaused) {
       this.nextStep();
       this.inputs.keys.enter = false;
     }
   }
 
-  // --- LOGIQUE D'INTERACTION ---
+  // --- INTERACTION ---
 
   checkProximity() {
     const range = 1.5;
@@ -130,7 +205,6 @@ class Game {
     this.isPaused = true;
     this.currentNPC = npc;
     this.dialogueIndex = 0;
-
     document.getElementById("dialogue-screen").style.display = "flex";
     document.getElementById("npc-portrait").src = npc.portrait;
     this.updateDialogueText();
@@ -161,14 +235,11 @@ class Game {
   handleChoice(choice) {
     if (choice === 'accept') {
         alert("Mission acceptée ! Vous recevez un objet.");
-        // Ici l'intégration de l'inventaire se fera plus tard si tu le souhaites
     }
-    
     document.getElementById("dialogue-screen").style.display = "none";
     this.isPaused = false;
     this.currentNPC = null;
   }
 }
 
-// Lancement global
 window.game = new Game();

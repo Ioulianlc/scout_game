@@ -49,7 +49,7 @@ export class Scout {
             this.updateUVs(); // Appliquer le bon cadrage initial
         });
 
-        this.speed = 4; 
+        this.speed = 15; 
         this.collider = new THREE.Box3(); 
     }
 
