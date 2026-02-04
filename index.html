@@ -1,29 +1,33 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>projet-scout</title>
-    <link rel="stylesheet" href="/src/style.css">
-  </head>
-  <body>
-    <canvas class="webgl"></canvas>
-    <div id="dialogue-box"></div>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>projet-scout</title>
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+
+<body>
+  <canvas class="webgl"></canvas>
+  <div id="dialogue-box"></div>
 
 
 
-    <div id="interaction-prompt" style="display:none; position:fixed; bottom:20%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); padding:10px; color:white; border-radius:5px;"></div>
-
-    <div id="dialogue-screen" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); flex-direction:column; align-items:center; justify-content:center; z-index:1000;">
-        <img id="npc-portrait" style="width:200px; height:200px; image-rendering:pixelated;">
-        <div style="background:#222; color:white; padding:20px; border:2px solid white; width:400px; text-align:center;">
-            <p id="dialogue-text"></p>
-            <div id="dialogue-options"></div>
-        </div>
+  <div id="interaction-prompt"
+    style="display:none; position:fixed; bottom:20%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); padding:10px; color:white; border-radius:5px;">
+  </div>
+  <div id="dialogue-screen"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); flex-direction:column; align-items:center; justify-content:center; z-index:1000;">
+    <img id="npc-portrait" style="width:200px; height:200px; image-rendering:pixelated;">
+    <div style="background:#222; color:white; padding:20px; border:2px solid white; width:400px; text-align:center;">
+      <p id="dialogue-text"></p>
+      <div id="dialogue-options"></div>
     </div>
+  </div>
 
-    <div id="debug-coords" style="
+  <div id="debug-coords" style="
     position: fixed;
     top: 10px;
     left: 10px;
@@ -38,11 +42,12 @@
     z-index: 2000;
 ">
     POS: 0, 0
-</div>
+  </div>
 
-    <script type="module" src="/src/main.js"></script>
+  <script type="module" src="/src/main.js"></script>
 
 
 
-  </body>
+</body>
+
 </html>
