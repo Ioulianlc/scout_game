@@ -27,7 +27,7 @@ class Game {
     this.isPaused = false;
     this.currentNPC = null;
     this.dialogueIndex = 0;
-
+// test
     // --- 1. NOUVEAU : Récupération de l'affichage DEBUG ---
     this.coordDisplay = document.getElementById("debug-coords");
 
