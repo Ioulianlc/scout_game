@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { Scout } from "./scout.js";
 import { World } from "./world.js";
 import { Inputs } from "./inputs.js";
+import { Book } from "./book.js";
 
 class Game {
   constructor() {
@@ -19,27 +20,35 @@ class Game {
     this.setupCamera();
 
     this.inputs = new Inputs();
-    // Attention : j'ai remis this.camera ici car ton World en a besoin pour l'outil de construction
-    this.world = new World(this.scene, this.camera); 
+    this.world = new World(this.scene, this.camera);
     this.scout = new Scout(this.scene);
 
-    // --- VARIABLES DE DIALOGUE ---
+    this.book = new Book(this);
+
+    // --- TEST : DONNER LA CARTE AU DÉPART ---
+    // On lui donne la carte dès le début pour tester le point rouge
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    this.book.addItem("Carte", "La carte de la forêt.");
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     this.isPaused = false;
     this.currentNPC = null;
     this.dialogueIndex = 0;
-
-    // --- 1. NOUVEAU : Récupération de l'affichage DEBUG ---
     this.coordDisplay = document.getElementById("debug-coords");
 
-    // --- 2. NOUVEAU : Touche F3 pour Cacher/Afficher ---
-    window.addEventListener('keydown', (e) => {
-        if (e.code === 'F3') {
-            e.preventDefault(); // Empêche l'action par défaut du navigateur
-            if (this.coordDisplay) {
-                this.coordDisplay.style.display = 
-                    this.coordDisplay.style.display === 'none' ? 'block' : 'none';
-            }
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "F3") {
+        e.preventDefault();
+        if (this.coordDisplay) {
+          this.coordDisplay.style.display =
+            this.coordDisplay.style.display === "none" ? "block" : "none";
         }
+      }
+
+      if (e.key.toLowerCase() === "i") {
+        if (this.currentNPC) return;
+        this.book.toggle();
+        this.isPaused = this.book.isOpen;
+      }
     });
 
     this.clock = new THREE.Clock();
@@ -48,14 +57,14 @@ class Game {
 
   setupCamera() {
     const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 10; // J'ai remis 10 (zoom standard) car 100 dézoome énormément
+    const frustumSize = 10;
     this.camera = new THREE.OrthographicCamera(
       (-frustumSize * aspect) / 2,
       (frustumSize * aspect) / 2,
       frustumSize / 2,
       -frustumSize / 2,
       0.1,
-      100
+      100,
     );
     this.camera.position.set(0, 0, 10);
     this.camera.lookAt(0, 0, 0);
@@ -69,26 +78,30 @@ class Game {
   }
 
   update(deltaTime) {
-    // 1. Détection de proximité constante
     this.checkProximity();
 
-    // 2. Mise à jour du Scout (uniquement si pas en pause)
+    // MISE À JOUR DU LIVRE (Même si le jeu est en pause, on met à jour la position)
+    // Cela permet au point rouge d'être bien placé quand on ouvre le livre
+    if (this.book) {
+      this.book.updatePlayerPositionOnMap(
+        this.scout.mesh.position.x,
+        this.scout.mesh.position.y,
+      );
+    }
+
     if (!this.isPaused) {
       this.scout.update(deltaTime, this.inputs, this.world.colliders);
 
-      // La caméra suit le personnage (avec effet fluide Lerp)
-      this.camera.position.x += (this.scout.mesh.position.x - this.camera.position.x) * 5 * deltaTime;
-      this.camera.position.y += (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
+      this.camera.position.x +=
+        (this.scout.mesh.position.x - this.camera.position.x) * 5 * deltaTime;
+      this.camera.position.y +=
+        (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
 
-      // --- 3. NOUVEAU : Mise à jour du texte X et Y ---
       if (this.coordDisplay) {
-          const x = this.scout.mesh.position.x.toFixed(1);
-          const y = this.scout.mesh.position.y.toFixed(1);
-          this.coordDisplay.innerText = `X: ${x} | Y: ${y}`;
+        this.coordDisplay.innerText = `X: ${this.scout.mesh.position.x.toFixed(1)} | Y: ${this.scout.mesh.position.y.toFixed(1)}`;
       }
     }
 
-    // 3. Touche Interaction (E)
     if (this.inputs.keys.interact) {
       if (!this.isPaused && this.nearestNPC) {
         this.startDialogue(this.nearestNPC);
@@ -96,14 +109,13 @@ class Game {
       this.inputs.keys.interact = false;
     }
 
-    // 4. Touche Suivant (Entrée)
     if (this.inputs.keys.enter && this.isPaused) {
-      this.nextStep();
+      if (this.currentNPC) {
+        this.nextStep();
+      }
       this.inputs.keys.enter = false;
     }
   }
-
-  // --- LOGIQUE D'INTERACTION ---
 
   checkProximity() {
     const range = 1.5;
@@ -130,7 +142,6 @@ class Game {
     this.isPaused = true;
     this.currentNPC = npc;
     this.dialogueIndex = 0;
-
     document.getElementById("dialogue-screen").style.display = "flex";
     document.getElementById("npc-portrait").src = npc.portrait;
     this.updateDialogueText();
@@ -140,7 +151,7 @@ class Game {
     const textElement = document.getElementById("dialogue-text");
     const optionsElement = document.getElementById("dialogue-options");
     const phrases = this.currentNPC.phrases;
-    
+
     if (this.dialogueIndex < phrases.length) {
       textElement.innerText = phrases[this.dialogueIndex];
       optionsElement.innerHTML = "<small>[Entrée] pour continuer...</small>";
@@ -159,16 +170,17 @@ class Game {
   }
 
   handleChoice(choice) {
-    if (choice === 'accept') {
-        alert("Mission acceptée ! Vous recevez un objet.");
-        // Ici l'intégration de l'inventaire se fera plus tard si tu le souhaites
+    if (choice === "accept") {
+      alert("Mission acceptée ! Vous recevez une récompense.");
+      this.book.addItem("Branche", "Un morceau de bois solide.", null);
+      // Exemple : On débloque aussi un badge pour avoir accepté une mission
+      this.book.unlockBadge("biche");
     }
-    
+
     document.getElementById("dialogue-screen").style.display = "none";
     this.isPaused = false;
     this.currentNPC = null;
   }
 }
 
-// Lancement global
 window.game = new Game();
