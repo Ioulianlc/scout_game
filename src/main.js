@@ -18,14 +18,29 @@ class Game {
 
     this.setupCamera();
 
-    this.inputs = new Inputs(); 
-    this.world = new World(this.scene); 
-    this.scout = new Scout(this.scene); 
+    this.inputs = new Inputs();
+    // Attention : j'ai remis this.camera ici car ton World en a besoin pour l'outil de construction
+    this.world = new World(this.scene, this.camera); 
+    this.scout = new Scout(this.scene);
 
     // --- VARIABLES DE DIALOGUE ---
-    this.isPaused = false; // Bloque le jeu pendant la discussion
-    this.currentNPC = null; // L'animal avec qui on parle
-    this.dialogueIndex = 0; // Index de la phrase actuelle
+    this.isPaused = false;
+    this.currentNPC = null;
+    this.dialogueIndex = 0;
+
+    // --- 1. NOUVEAU : Récupération de l'affichage DEBUG ---
+    this.coordDisplay = document.getElementById("debug-coords");
+
+    // --- 2. NOUVEAU : Touche F3 pour Cacher/Afficher ---
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'F3') {
+            e.preventDefault(); // Empêche l'action par défaut du navigateur
+            if (this.coordDisplay) {
+                this.coordDisplay.style.display = 
+                    this.coordDisplay.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+    });
 
     this.clock = new THREE.Clock();
     this.loop();
@@ -33,7 +48,7 @@ class Game {
 
   setupCamera() {
     const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 10; 
+    const frustumSize = 10; // J'ai remis 10 (zoom standard) car 100 dézoome énormément
     this.camera = new THREE.OrthographicCamera(
       (-frustumSize * aspect) / 2,
       (frustumSize * aspect) / 2,
@@ -60,10 +75,17 @@ class Game {
     // 2. Mise à jour du Scout (uniquement si pas en pause)
     if (!this.isPaused) {
       this.scout.update(deltaTime, this.inputs, this.world.colliders);
-      
-      // La caméra suit le personnage seulement s'il bouge
-      this.camera.position.x = this.scout.mesh.position.x;
-      this.camera.position.y = this.scout.mesh.position.y;
+
+      // La caméra suit le personnage (avec effet fluide Lerp)
+      this.camera.position.x += (this.scout.mesh.position.x - this.camera.position.x) * 5 * deltaTime;
+      this.camera.position.y += (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
+
+      // --- 3. NOUVEAU : Mise à jour du texte X et Y ---
+      if (this.coordDisplay) {
+          const x = this.scout.mesh.position.x.toFixed(1);
+          const y = this.scout.mesh.position.y.toFixed(1);
+          this.coordDisplay.innerText = `X: ${x} | Y: ${y}`;
+      }
     }
 
     // 3. Touche Interaction (E)
@@ -96,7 +118,6 @@ class Game {
       }
     }
 
-    // Affiche le petit texte "Appuyez sur E"
     if (this.nearestNPC && !this.isPaused) {
       prompt.style.display = "block";
       prompt.innerText = `Appuyez sur E pour parler à ${this.nearestNPC.name}`;
@@ -111,7 +132,7 @@ class Game {
     this.dialogueIndex = 0;
 
     document.getElementById("dialogue-screen").style.display = "flex";
-    document.getElementById("npc-portrait").src = npc.portrait; // Image fixe de l'animal
+    document.getElementById("npc-portrait").src = npc.portrait;
     this.updateDialogueText();
   }
 
@@ -119,12 +140,11 @@ class Game {
     const textElement = document.getElementById("dialogue-text");
     const optionsElement = document.getElementById("dialogue-options");
     const phrases = this.currentNPC.phrases;
-    console.log("J'essaie d'afficher :", phrases[this.dialogueIndex]); // <--- AJOUTE ÇA
+    
     if (this.dialogueIndex < phrases.length) {
       textElement.innerText = phrases[this.dialogueIndex];
       optionsElement.innerHTML = "<small>[Entrée] pour continuer...</small>";
     } else {
-      // Fin des phrases : on affiche les choix
       textElement.innerText = "Que veux-tu faire ?";
       optionsElement.innerHTML = `
         <button onclick="window.game.handleChoice('accept')">Accepter la mission</button>
@@ -141,15 +161,14 @@ class Game {
   handleChoice(choice) {
     if (choice === 'accept') {
         alert("Mission acceptée ! Vous recevez un objet.");
-        // Ici tu pourras ajouter l'objet à l'inventaire
+        // Ici l'intégration de l'inventaire se fera plus tard si tu le souhaites
     }
     
-    // Fermeture du dialogue
     document.getElementById("dialogue-screen").style.display = "none";
     this.isPaused = false;
     this.currentNPC = null;
   }
 }
 
-// Lancement et exposition globale pour les boutons HTML
+// Lancement global
 window.game = new Game();

@@ -4,7 +4,9 @@ export class World {
     constructor(scene) {
         this.scene = scene;
         this.colliders = []; 
-        this.npcs = [];      
+        this.npcs = [];  
+        
+        this.debugMode = true;
 
         this.initLevel();
         this.initNPCs();
@@ -12,8 +14,8 @@ export class World {
 
     initLevel() {
         const loader = new THREE.TextureLoader();
-        const mapW = 6144 / 32; 
-        const mapH = 3104 / 32; 
+        const mapW = 192; 
+        const mapH = 112 ; 
 
         loader.load('./src/assets/map.png', (texture) => {
             texture.magFilter = THREE.NearestFilter;
@@ -25,8 +27,11 @@ export class World {
 
         // Tes collisions existantes
         this.addCollider(-7, 3, 5, 5); 
-        this.addCollider(6, -2, 4, 8); 
-        this.addCollider(0, 5, 4, 1); 
+        this.addCollider(this.scene.width, 48, 1, 1); 
+
+        // this.addCollider (0,0,1,1);
+        // this.addCollider(6, -2, 4, 8); 
+        // this.addCollider(0, 5, 4, 1); 
     }
 
     initNPCs() {
@@ -52,6 +57,11 @@ export class World {
             new THREE.Vector3(w, h, 1)
         );
         this.colliders.push(box);
+        if (this.debugMode) {
+            // Box3Helper dessine automatiquement les contours de la boîte
+            const helper = new THREE.Box3Helper(box, 0xff0000); // 0xff0000 = Rouge
+            this.scene.add(helper);
+        }
     }
 
     /**

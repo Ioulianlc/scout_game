@@ -8,9 +8,9 @@ export class Scout {
         this.nbColonnes = 4;
         this.nbLignes = 4;
         
-        // Tailles basées sur tes paramètres (64x32 pixels)
-        this.width = 32 / 32;  // 2 unités
-        this.height = 32 / 32; // 1 unité
+        // Tailles basées sur tes paramètres (32x32 pixels)
+        this.width = 1;  // 2 unités
+        this.height = 2; // 1 unité
 
         // --- 2. GESTION DE L'ANIMATION ---
         this.currentColumn = 0;
@@ -22,7 +22,7 @@ export class Scout {
         const geometry = new THREE.PlaneGeometry(this.width, this.height);
         // On remplace la couleur rouge par un matériau prêt à recevoir une texture
         const material = new THREE.MeshBasicMaterial({ 
-            transparent: true,
+            transparent: false,
             alphaTest: 0.5,    // Coupe le blanc net
             side: THREE.DoubleSide
         });
@@ -33,7 +33,7 @@ export class Scout {
 
         // --- 4. CHARGEMENT DE LA TEXTURE ---
         const loader = new THREE.TextureLoader();
-        loader.load("./src/assets/scout.png", (texture) => {
+        loader.load("./src/assets/scoutt.png", (texture) => {
             texture.magFilter = THREE.NearestFilter;
             texture.minFilter = THREE.NearestFilter;
 
