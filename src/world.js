@@ -16,6 +16,9 @@ export class World {
         
         // Liste pour stocker les arbres
         this.vegetation = []; 
+
+        // Collectable
+        this.collectibles = [];
         
         this.currentMapMesh = null;
         this.debugMode = true;
@@ -128,6 +131,9 @@ export class World {
             veg.plantTent(-22, 48);
             veg.plantTent(-31, 50);
 
+            // Buche
+            veg.plantLog(-31, 43);
+
             
         }
     }
@@ -150,6 +156,9 @@ export class World {
             });
             this.vegetation = []; // Vide la liste
         }
+
+        // Vide la liste de collectable
+        this.collectibles = [];
 
         // Vide les listes de collisions
         this.colliders = [];

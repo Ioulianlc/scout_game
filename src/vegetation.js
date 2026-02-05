@@ -25,10 +25,21 @@ export class VegetationGenerator {
         // 3. CAMPEMENT
         this.campfireTexture = loader.load('./feucamp.png');
         this.campfireTexture.magFilter = THREE.NearestFilter;
-        
-        // 4. NOUVEAU : TENTE
         this.tentTexture = loader.load('./tente.png');
         this.tentTexture.magFilter = THREE.NearestFilter;
+
+        // 4. NOUVEAU : LES 3 BÛCHES
+        // On crée une liste (Array) avec tes 3 images
+        this.logTextures = [
+            loader.load('./rondindebois.png'),
+            loader.load('./rondindebois1.png'),
+            loader.load('./rondindebois2.png')
+        ];
+        
+        // On applique le filtre "Pixel Art" sur les 3 images d'un coup
+        this.logTextures.forEach(texture => {
+            texture.magFilter = THREE.NearestFilter;
+        });
     }
 
     // --- GÉNÉRATEURS DE ZONES ---
@@ -83,16 +94,27 @@ export class VegetationGenerator {
         this.world.addCollider(x, y, 1, 1);
     }
 
-    // --- NOUVEAU : TENTE ---
     plantTent(x, y) {
-        // Une tente fait environ 3 de large et 2 de haut
-        const width = 2;
-        const height = 3;
-        
-        this.createMesh(x, y, width, height, this.tentTexture, false);
-        
-        // Collision : On bloque tout le bas de la tente (2.5 de large, 1 de haut)
+        this.createMesh(x, y, 2, 3, this.tentTexture, false);
         this.world.addCollider(x, y, 1, 1.5); 
+    }
+
+    // --- NOUVEAU : PLANTER UNE BÛCHE ALÉATOIRE ---
+    plantLog(x, y) {
+        // 1. Choisir une texture au hasard dans la liste (0, 1 ou 2)
+        const randomIndex = Math.floor(Math.random() * this.logTextures.length);
+        const randomTexture = this.logTextures[randomIndex];
+
+        // 2. Créer l'objet avec cette texture
+        const mesh = this.createMesh(x, y, 0.8, 0.8, randomTexture, false);
+        
+        // 3. Nom pour l'inventaire
+        mesh.name = "Bûche"; 
+
+        // 4. Ajouter aux objets ramassables
+        if (this.world.collectibles) {
+            this.world.collectibles.push(mesh);
+        }
     }
 
     // --- UTILITAIRE ---

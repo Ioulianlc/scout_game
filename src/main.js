@@ -4,8 +4,6 @@ import { World } from "./world.js";
 import { Inputs } from "./inputs.js";
 import { LightSystem } from "./lightSystem.js";
 import { AudioManager } from "./audioManager.js";
-// On peut retirer l'import de VegetationGenerator car il n'est plus utilisé ici
-// import { VegetationGenerator } from "./vegetation.js"; 
 import { Book } from "./book.js";
 import { QuestManager } from "./questManager.js";
 
@@ -27,7 +25,6 @@ class Game {
 
     // --- AUDIO ---
     this.audioManager = new AudioManager();
-    // CORRECTION DU CHEMIN (Assure-toi que le fichier est bien dans public/sounds/)
     this.audioManager.load('forest_theme', './sounds/forest_theme.mp3');
 
     window.addEventListener('keydown', () => {
@@ -116,6 +113,10 @@ class Game {
   update(deltaTime) {
     this.checkProximity();
 
+    // --- AJOUT : On vérifie les bûches à ramasser ---
+    this.checkCollectibles();
+    // ------------------------------------------------
+
     if (this.book) {
         this.book.updatePlayerPositionOnMap(
           this.scout.mesh.position.x,
@@ -176,9 +177,6 @@ class Game {
       }
 
       // --- LOGIQUE NUIT ---
-      const px = this.scout.mesh.position.x;
-      const py = this.scout.mesh.position.y;
-
       const isDarkZone = (this.world.currentMapId === 'grotte'); 
 
       if (isDarkZone) {
@@ -189,6 +187,8 @@ class Game {
       }
 
       if (this.coordDisplay) {
+          const px = this.scout.mesh.position.x;
+          const py = this.scout.mesh.position.y;
           this.coordDisplay.innerText = `X: ${px.toFixed(1)} | Y: ${py.toFixed(1)}`;
       }
     }   
@@ -230,8 +230,61 @@ class Game {
       prompt.style.display = "block";
       prompt.innerText = `Appuyez sur E pour parler à ${this.nearestNPC.name}`;
     } else {
-      prompt.style.display = "none";
+      // Petite astuce : on ne cache le texte que si on n'a pas non plus d'objet à ramasser
+      // (sinon le texte de la bûche clignoterait)
+      if (!this.world.collectibles || this.world.collectibles.length === 0) {
+          prompt.style.display = "none";
+      }
     }
+  }
+
+  // --- NOUVEAU : GESTION DU RAMASSAGE (BÛCHES) ---
+  checkCollectibles() {
+      if (!this.world.collectibles) return;
+
+      const pickupRange = 1.5;
+      const prompt = document.getElementById("interaction-prompt");
+      let itemFound = null;
+      let indexFound = -1;
+
+      // On regarde si on est proche d'un objet
+      for (let i = 0; i < this.world.collectibles.length; i++) {
+          const item = this.world.collectibles[i];
+          const dist = this.scout.mesh.position.distanceTo(item.position);
+          
+          if (dist < pickupRange) {
+              itemFound = item;
+              indexFound = i;
+              break;
+          }
+      }
+
+      // Si on trouve un objet et qu'on n'est pas déjà en dialogue
+      if (itemFound && !this.isPaused && !this.nearestNPC) {
+          prompt.style.display = "block";
+          prompt.innerText = `Appuyez sur E pour ramasser : ${itemFound.name}`;
+
+          if (this.inputs.keys.interact) {
+              // 1. Ajouter à l'inventaire
+              this.book.addItem(itemFound.name, "Du bois pour le castor.", null);
+              
+              // 2. Son
+              this.audioManager.play('book_open'); 
+
+              // 3. Supprimer visuellement
+              this.scene.remove(itemFound);
+
+              // 4. Supprimer de la liste logique
+              this.world.collectibles.splice(indexFound, 1); 
+              
+              this.inputs.keys.interact = false;
+              prompt.style.display = "none";
+          }
+      } 
+      // Important : ne pas cacher le prompt si c'est un PNJ qui l'utilise
+      else if (!this.nearestNPC) {
+          prompt.style.display = "none";
+      }
   }
 
   startDialogue(npc) {
@@ -289,17 +342,22 @@ class Game {
         this.questManager.completeQuest("scout");
         this.book.updateUI();
       } else if (npcName === "Castor") {
-        const hasChamalow = this.book.inventory.find(
-          (i) => i && i.name === "Chamalow",
+        
+        // --- MISE A JOUR CASTOR : BÛCHE ---
+        const hasLog = this.book.inventory.find(
+          (i) => i && i.name === "Bûche",
         );
-        if (hasChamalow) {
-          this.questManager.acceptQuest("chamalow");
-          this.book.removeItem("Chamalow");
+        if (hasLog) {
+          this.questManager.acceptQuest("chamalow"); // On garde l'ID de quête existant pour simplifier
+          this.book.removeItem("Bûche");
           this.questManager.completeQuest("chamalow");
           this.book.updateUI();
+          alert("Merci ! Avec ce bois, je vais pouvoir réparer mon barrage !");
         } else {
-          alert("Mme. Castor attend ses chamalows...");
+          alert("Je ne peux pas travailler... Trouve-moi une Bûche de bois !");
         }
+        // ----------------------------------
+
       } else if (npcName === "Panneau") {
         this.questManager.acceptQuest("pont");
       }
