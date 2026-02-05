@@ -60,7 +60,7 @@ export class VegetationGenerator {
     plantTree(x, y) {
         // A. Visuel (L'image de l'arbre)
         // On suppose qu'un arbre fait 2x3 unités (ajuste selon ton image)
-        const width = 2;
+        const width = 3;
         const height = 3; 
 
         const geometry = new THREE.PlaneGeometry(width, height);

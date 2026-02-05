@@ -22,14 +22,15 @@ class Game {
 
     this.inputs = new Inputs();
     
-    this.world = new World(this.scene, this.camera); 
     this.scout = new Scout(this.scene);
 
+    // --- MODIFICATION 1 : On passe 'scout' au World pour qu'il puisse le gérer ---
+    this.world = new World(this.scene, this.camera, this.scout); 
+    
     // --- GÉNÉRATION D'ARBRES ---
-  const vegetation = new VegetationGenerator(this.scene, this.world);
-
-    // Utilise ton curseur rouge pour trouver une zone vide sur ta map !
-    // Exemple : Zone à gauche (X: -80 à -20, Y: -40 à 40), 50 arbres
+    // Note : Pour l'instant, ces arbres resteront affichés même si tu changes de carte.
+    // Idéalement, il faudra déplacer ça dans world.js plus tard.
+    const vegetation = new VegetationGenerator(this.scene, this.world);
     vegetation.generateZone(-42, 34, -55, -6, 200);
     vegetation.generateZone(-10, 42, 39, 10, 60);
     vegetation.generateZone(-17, 48, 56, 40, 43);
@@ -63,7 +64,6 @@ class Game {
     });
 
     // --- GESTION DU REDIMENSIONNEMENT (Anti-Étirement) ---
-    // C'est cette ligne qui manquait pour garder les bonnes proportions !
     window.addEventListener('resize', () => this.handleResize());
 
     this.clock = new THREE.Clock();
@@ -71,7 +71,7 @@ class Game {
   }
 
   setupCamera() {
-    this.frustumSize = 100; // Zoom standard
+    this.frustumSize = 100; // J'ai remis 10 (zoom standard) car 100 est très loin
     
     // On crée une caméra vide, elle sera configurée par handleResize
     this.camera = new THREE.OrthographicCamera(0, 0, 0, 0, 0.1, 100);
@@ -86,8 +86,7 @@ class Game {
     // 1. Calcul du ratio de l'écran (Largeur / Hauteur)
     const aspect = window.innerWidth / window.innerHeight;
 
-    // 2. Mise à jour des bordures de la caméra pour respecter ce ratio
-    // Cela empêche l'étirement : si l'écran est large, on voit plus sur les côtés.
+    // 2. Mise à jour des bordures de la caméra
     this.camera.left = (-this.frustumSize * aspect) / 2;
     this.camera.right = (this.frustumSize * aspect) / 2;
     this.camera.top = this.frustumSize / 2;
@@ -113,22 +112,21 @@ class Game {
     if (!this.isPaused) {
       this.scout.update(deltaTime, this.inputs, this.world.colliders);
 
-      // --- 1. MOUVEMENT FLUIDE ---
+      // --- 1. MOUVEMENT FLUIDE CAMÉRA ---
       let targetX = this.camera.position.x + (this.scout.mesh.position.x - this.camera.position.x) * 5 * deltaTime;
       let targetY = this.camera.position.y + (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
 
       // --- 2. BLOCAGE CAMÉRA (Clamping) ---
-      // On recalcule l'aspect ratio pour savoir exactement quoi bloquer
       const aspect = window.innerWidth / window.innerHeight;
-      
-      const camHalfHeight = this.frustumSize / 2; // = 5
+      const camHalfHeight = this.frustumSize / 2;
       const camHalfWidth = (this.frustumSize * aspect) / 2;
 
       // Limites basées sur ta map (192x112 -> demi-taille 96x56)
+      // Note : Si tu changes de map pour une plus petite (Grotte), il faudra adapter ces valeurs !
+      // Pour l'instant on garde celles de la map principale.
       const limitX = 96 - camHalfWidth; 
       const limitY = 56 - camHalfHeight;
 
-      // Si l'écran est plus petit que la map, on clamp. Sinon on centre (0).
       if (limitX > 0) {
           this.camera.position.x = THREE.MathUtils.clamp(targetX, -limitX, limitX);
       } else {
@@ -140,6 +138,35 @@ class Game {
       } else {
           this.camera.position.y = 0;
       }
+
+      // --- MODIFICATION 2 : SYSTÈME DE TÉLÉPORTATION ---
+      // On vérifie si le joueur marche sur un téléporteur
+      if (this.world.teleporters) {
+          const px = this.scout.mesh.position.x;
+          const py = this.scout.mesh.position.y;
+
+          for (const tp of this.world.teleporters) {
+               const dist = Math.sqrt((px - tp.x)**2 + (py - tp.y)**2);
+               
+               // Si distance < 1.0 (on est dessus)
+               if (dist < 1.0) {
+                   console.log("Teleportation vers :", tp.targetMap);
+                   
+                   // A. Charger la nouvelle carte
+                   this.world.loadMap(tp.targetMap);
+                   
+                   // B. Déplacer le joueur
+                   this.scout.mesh.position.set(tp.targetX, tp.targetY, 0);
+
+                   // C. Reset immédiat de la caméra pour éviter de voir le fond vert
+                   this.camera.position.x = tp.targetX;
+                   this.camera.position.y = tp.targetY;
+                   
+                   break; // On arrête pour ne pas téléporter en boucle
+               }
+          }
+      }
+      // ------------------------------------------------
 
       // --- LOGIQUE NUIT / LABYRINTHE ---
       const px = this.scout.mesh.position.x;
@@ -185,12 +212,15 @@ class Game {
     this.nearestNPC = null;
     const prompt = document.getElementById("interaction-prompt");
 
-    for (const npc of this.world.npcs) {
-      const dist = this.scout.mesh.position.distanceTo(npc.position);
-      if (dist < range) {
-        this.nearestNPC = npc;
-        break;
-      }
+    // Vérification de sécurité au cas où world.npcs est vide
+    if (this.world.npcs) {
+        for (const npc of this.world.npcs) {
+          const dist = this.scout.mesh.position.distanceTo(npc.position);
+          if (dist < range) {
+            this.nearestNPC = npc;
+            break;
+          }
+        }
     }
 
     if (this.nearestNPC && !this.isPaused) {
