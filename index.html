@@ -1,39 +1,67 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>projet-scout</title>
     <link rel="stylesheet" href="/src/style.css">
-  </head>
-  <body>
+</head>
+
+<body>
+    <div id="main-menu">
+        <div class="settings-container">
+            <button id="btn-settings" class="btn-params">
+                <img src="./settings.png" alt="Settings" id="img-gear">
+            </button>
+            <span class="echap">echap</span>
+        </div>
+
+        <div class="menu-center">
+            <img src="./personnage.png" alt="Character Preview" class="character-preview">
+            <button id="btn-new-game" class="btn-newgame">
+                Nouvelle Partie
+            </button>
+        </div>
+
+        <div class="profile-badge">
+            <div class="profile-icon">
+                <img src="./profil.png" alt="User">
+            </div>
+            <span class="profile-name">Titouan</span>
+        </div>
+    </div>
     <canvas class="webgl"></canvas>
-    
+
     <div id="dialogue-box"></div>
 
     <div id="dynamic-compass" style="
-        display: none; /* Le JS le passera en block quand on aura l'objet */
+        display: none;
         position: fixed; 
         top: 20px; 
         right: 20px; 
         width: 60px; 
         height: 60px; 
-        background: url('./src/assets/boussole.png') no-repeat center center; 
+        background: url('./boussole.png') no-repeat center center; 
         background-size: contain;
-        z-index: 1500;
+        z-index: 10;
     "></div>
 
-    <div id="interaction-prompt" style="display:none; position:fixed; bottom:20%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); padding:10px; color:white; border-radius:5px;"></div>
+    <div id="interaction-prompt"
+        style="display:none; position:fixed; bottom:20%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); padding:10px; color:white; border-radius:5px;">
+    </div>
 
-    <div id="dialogue-screen" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); flex-direction:column; align-items:center; justify-content:center; z-index:1000;">
+    <div id="dialogue-screen"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); flex-direction:column; align-items:center; justify-content:center; z-index:1000;">
         <img id="npc-portrait" style="width:200px; height:200px; image-rendering:pixelated;" src="" alt="NPC Portrait">
-        <div style="background:#222; color:white; padding:20px; border:2px solid white; width:400px; text-align:center;">
+        <div
+            style="background:#222; color:white; padding:20px; border:2px solid white; width:400px; text-align:center;">
             <p id="dialogue-text"></p>
             <div id="dialogue-options"></div>
         </div>
     </div>
-
+    z
     <div id="debug-coords" style="
         position: fixed;
         top: 10px;
@@ -69,5 +97,6 @@
     </div>
 
     <script type="module" src="/src/main.js"></script>
-  </body>
+</body>
+
 </html>
