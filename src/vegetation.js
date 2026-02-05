@@ -3,22 +3,18 @@ import * as THREE from 'three';
 export class VegetationGenerator {
     constructor(scene, world) {
         this.scene = scene;
-        this.world = world; // On a besoin du World pour ajouter les collisions
-        this.trees = [];
+        this.world = world; 
+        this.trees = []; // Sert uniquement pour vérifier la distance entre les arbres lors de la génération
         
-        // On charge l'image de l'arbre une seule fois pour optimiser
+        // On charge l'image de l'arbre
         const loader = new THREE.TextureLoader();
-        this.treeTexture = loader.load('/tree.png'); // Mets ton image d'arbre ici !
+        // J'ai mis le chemin standard 'src/assets/'. Vérifie que ton image est bien là !
+        this.treeTexture = loader.load('./tree.png'); 
         this.treeTexture.magFilter = THREE.NearestFilter;
     }
 
     /**
      * Génère une forêt dans une zone rectangulaire
-     * @param {number} minX - Début Zone X
-     * @param {number} maxX - Fin Zone X
-     * @param {number} minY - Début Zone Y
-     * @param {number} maxY - Fin Zone Y
-     * @param {number} count - Nombre d'arbres à planter
      */
     generateZone(minX, maxX, minY, maxY, count) {
         let planted = 0;
@@ -43,7 +39,7 @@ export class VegetationGenerator {
     }
 
     isTooClose(x, y) {
-        const minDistance = 2.5; // Espace minimum entre deux arbres (pour pouvoir passer)
+        const minDistance = 2.5; 
         
         for (const tree of this.trees) {
             const dx = tree.x - x;
@@ -51,7 +47,7 @@ export class VegetationGenerator {
             const distance = Math.sqrt(dx*dx + dy*dy);
             
             if (distance < minDistance) {
-                return true; // Trop proche !
+                return true; 
             }
         }
         return false;
@@ -59,7 +55,6 @@ export class VegetationGenerator {
 
     plantTree(x, y) {
         // A. Visuel (L'image de l'arbre)
-        // On suppose qu'un arbre fait 2x3 unités (ajuste selon ton image)
         const width = 3;
         const height = 3; 
 
@@ -72,17 +67,21 @@ export class VegetationGenerator {
         
         const mesh = new THREE.Mesh(geometry, material);
         
-        // Z-Index : On utilise Y pour la profondeur (les arbres plus bas cachent ceux plus haut)
-        // On décale un peu le Z (y * 0.01) pour l'effet de profondeur
+        // Z-Index : On utilise Y pour la profondeur
         mesh.position.set(x, y + height/2, 1); 
         this.scene.add(mesh);
 
+        // --- C'EST ICI QUE LA FUSION AGIT ---
+        // On ajoute le mesh à la liste du World pour qu'il puisse être supprimé au changement de map
+        if (this.world.vegetation) {
+            this.world.vegetation.push(mesh);
+        }
+
         // B. Collision (Le tronc)
-        // Le tronc est généralement en bas de l'image et plus petit que le feuillage
-        // Ici on crée un carré de collision de 1x1 à la base de l'arbre
+        // Le tronc est un obstacle invisible en bas de l'arbre
         this.world.addCollider(x, y, 1, 0.5); 
 
-        // C. Sauvegarde
+        // C. Sauvegarde interne pour le calcul de distance
         this.trees.push({ x, y, mesh });
     }
 }

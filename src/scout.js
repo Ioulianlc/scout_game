@@ -32,7 +32,7 @@ export class Scout {
 
     // --- 4. CHARGEMENT DE LA TEXTURE ---
     const loader = new THREE.TextureLoader();
-    loader.load("/scoutt.png", (texture) => {
+    loader.load("./scoutt.png", (texture) => {
       texture.magFilter = THREE.NearestFilter;
       texture.minFilter = THREE.NearestFilter;
 

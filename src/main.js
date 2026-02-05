@@ -3,9 +3,9 @@ import { Scout } from "./scout.js";
 import { World } from "./world.js";
 import { Inputs } from "./inputs.js";
 import { LightSystem } from "./lightSystem.js";
-import { VegetationGenerator } from "./vegetation.js";
 import { AudioManager } from "./audioManager.js";
-// --- NOUVEAUX IMPORTS (VENANT DU SECOND CODE) ---
+// On peut retirer l'import de VegetationGenerator car il n'est plus utilisé ici
+// import { VegetationGenerator } from "./vegetation.js"; 
 import { Book } from "./book.js";
 import { QuestManager } from "./questManager.js";
 
@@ -16,7 +16,6 @@ class Game {
       canvas: this.canvas,
       alpha: true,
     });
-    // On garde la gestion du pixel ratio du Main
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     this.scene = new THREE.Scene();
@@ -26,39 +25,30 @@ class Game {
 
     this.inputs = new Inputs();
 
+    // --- AUDIO ---
     this.audioManager = new AudioManager();
+    // CORRECTION DU CHEMIN (Assure-toi que le fichier est bien dans public/sounds/)
+    this.audioManager.load('forest_theme', './sounds/forest_theme.mp3');
 
-    this.audioManager.load('forest_theme', '.musiquetheme/.mp3');
-
-    // 2. Astuce pour lancer la musique au premier mouvement
-    // "once: true" veut dire que cet événement ne se déclenchera qu'une seule fois
     window.addEventListener('keydown', () => {
-        // On lance la musique d'ambiance
-        this.audioManager.playMusic('forest_theme', 0.3); // Volume 0.3 (douce)
+        this.audioManager.playMusic('forest_theme', 0.3);
     }, { once: true });
         
     this.scout = new Scout(this.scene);
 
-    // On garde l'initialisation du Main (qui passe 'scout' au World pour les téléporteurs)
+    // C'est ici que la végétation est créée maintenant (dans le World)
     this.world = new World(this.scene, this.camera, this.scout); 
     
-    // --- INTEGRATION : BOOK & QUEST MANAGER ---
+    // --- LIVRE & QUÊTES ---
     this.book = new Book(this);
     this.questManager = new QuestManager(this);
 
-    // Objet de départ (Second Code)
     this.book.addItem("Carte", "La carte de la forêt.", null);
 
-    // --- GÉNÉRATION D'ARBRES (MAIN) ---
-    const vegetation = new VegetationGenerator(this.scene, this.world);
-    vegetation.generateZone(-42, 34, -55, -6, 200);
-    vegetation.generateZone(-10, 42, 39, 10, 60);
-    vegetation.generateZone(-17, 48, 56, 40, 43);
-
-    // --- SYSTÈME DE LUMIÈRE (MAIN) ---
+    // --- LUMIÈRE ---
     this.lightSystem = new LightSystem(this.scene);
 
-    // --- ZONE DU LABYRINTHE (MAIN) ---
+    // --- ZONE LABYRINTHE ---
     this.mazeZone = {
         minX: -95,  
         maxX: -52,  
@@ -66,16 +56,15 @@ class Game {
         maxY: 30   
     };
 
-    // --- VARIABLES DE DIALOGUE ---
+    // --- DIALOGUES ---
     this.isPaused = false;
     this.currentNPC = null;
     this.dialogueIndex = 0;
 
-    // --- DEBUG HUD & INPUTS FUSIONNÉS ---
+    // --- DEBUG & UI ---
     this.coordDisplay = document.getElementById("debug-coords");
     
     window.addEventListener('keydown', (e) => {
-        // Debug F3 (Main)
         if (e.code === 'F3') {
             e.preventDefault();
             if (this.coordDisplay) {
@@ -84,15 +73,15 @@ class Game {
             }
         }
 
-        // Inventaire "I" (Second Code)
         if (e.key.toLowerCase() === "i") {
-            if (this.currentNPC) return; // Pas d'inventaire pendant un dialogue
+            if (this.currentNPC) return;
             this.book.toggle();
             this.isPaused = this.book.isOpen;
+            // Son inventaire
+            this.audioManager.play('book_open');
         }
     });
 
-    // --- GESTION DU REDIMENSIONNEMENT (Main) ---
     window.addEventListener('resize', () => this.handleResize());
 
     this.clock = new THREE.Clock();
@@ -127,7 +116,6 @@ class Game {
   update(deltaTime) {
     this.checkProximity();
 
-    // --- INTEGRATION : MISE A JOUR LIVRE & BOUSSOLE ---
     if (this.book) {
         this.book.updatePlayerPositionOnMap(
           this.scout.mesh.position.x,
@@ -135,7 +123,6 @@ class Game {
         );
     }
 
-    // Animation de la boussole (Second Code)
     const compassUI = document.getElementById("dynamic-compass");
     if (compassUI && compassUI.style.display !== "none") {
         const wobble = Math.sin(Date.now() * 0.005) * 4;
@@ -145,7 +132,7 @@ class Game {
     if (!this.isPaused) {
       this.scout.update(deltaTime, this.inputs, this.world.colliders, this.audioManager);
 
-      // --- CAMÉRA (Logique du Main conservée pour les limites de map) ---
+      // --- CAMÉRA ---
       let targetX = this.camera.position.x + (this.scout.mesh.position.x - this.camera.position.x) * 5 * deltaTime;
       let targetY = this.camera.position.y + (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
 
@@ -153,7 +140,6 @@ class Game {
       const camHalfHeight = this.frustumSize / 2;
       const camHalfWidth = (this.frustumSize * aspect) / 2;
 
-      // Limites basées sur la map principale (Main)
       const limitX = 96 - camHalfWidth; 
       const limitY = 56 - camHalfHeight;
 
@@ -169,7 +155,7 @@ class Game {
           this.camera.position.y = 0;
       }
 
-      // --- SYSTÈME DE TÉLÉPORTATION (Main) ---
+      // --- TÉLÉPORTATION ---
       if (this.world.teleporters) {
           const px = this.scout.mesh.position.x;
           const py = this.scout.mesh.position.y;
@@ -177,7 +163,9 @@ class Game {
           for (const tp of this.world.teleporters) {
                const dist = Math.sqrt((px - tp.x)**2 + (py - tp.y)**2);
                if (dist < 1.0) {
-                   // console.log("Teleportation vers :", tp.targetMap);
+                   // Son téléportation
+                   this.audioManager.play('teleport');
+
                    this.world.loadMap(tp.targetMap);
                    this.scout.mesh.position.set(tp.targetX, tp.targetY, 0);
                    this.camera.position.x = tp.targetX;
@@ -187,7 +175,7 @@ class Game {
           }
       }
 
-      // --- LOGIQUE NUIT / LABYRINTHE (Main) ---
+      // --- LOGIQUE NUIT ---
       const px = this.scout.mesh.position.x;
       const py = this.scout.mesh.position.y;
 
@@ -282,7 +270,6 @@ class Game {
     this.updateDialogueText();
   }
 
-  // --- INTEGRATION : NOUVELLE LOGIQUE DE CHOIX (Second Code) ---
   handleChoice(choice) {
     if (choice === "accept") {
       const npcName = this.currentNPC.name;
@@ -297,7 +284,6 @@ class Game {
           this.questManager.acceptQuest("bousole");
           this.book.removeItem("Carte");
           this.questManager.completeQuest("bousole");
-          // FORCER LA MISE A JOUR VISUELLE DE LA BOUSSOLE
           this.book.updateUI();
         } else {
           alert("Le Renard ricane : 'Pas de carte, pas de boussole !'");

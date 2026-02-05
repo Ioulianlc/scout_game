@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { LevelBuilder } from "./tools.js";
 import { maps } from "./maps.js"; 
+// N'oublie pas cet import !
+import { VegetationGenerator } from "./vegetation.js"; 
 
 export class World {
-    // On garde le constructeur complet (nécessaire pour game.js)
     constructor(scene, camera, scout) {
         this.scene = scene;
         this.camera = camera;
@@ -13,13 +14,17 @@ export class World {
         this.teleporters = []; 
         this.npcs = [];  
         
+        // Liste pour stocker les arbres
+        this.vegetation = []; 
+        
         this.currentMapMesh = null;
-        this.debugMode = true; // Mets à false si tu veux cacher les boites rouges
+        this.debugMode = true;
 
-        // On charge la carte par défaut définie dans maps.js
+        // On lance la première carte
         this.loadMap("exterieur");
     }
 
+    // --- C'EST ICI QUE DOIT ÊTRE LA LOGIQUE DES ARBRES ---
     loadMap(mapId) {
         console.log(`🌍 Chargement de la carte : ${mapId}`);
         const data = maps[mapId];
@@ -29,15 +34,15 @@ export class World {
             return;
         }
 
-        // 1. NETTOYAGE
+        // 1. NETTOYAGE (Arbres, murs, NPCs...)
         this.clearLevel();
 
-        // 2. SPAWN DU JOUEUR
+        // 2. SPAWN
         if (data.spawn) {
             this.scout.mesh.position.set(data.spawn.x, data.spawn.y, 0);
         }
 
-        // 3. CHARGEMENT TEXTURE & SOL
+        // 3. TEXTURE SOL
         const loader = new THREE.TextureLoader();
         loader.load(data.texture, (texture) => {
             texture.magFilter = THREE.NearestFilter;
@@ -48,26 +53,34 @@ export class World {
             this.currentMapMesh.position.z = -1; 
             this.scene.add(this.currentMapMesh);
 
-            // Réactivation du Builder
             if (this.debugMode) {
                 this.builder = new LevelBuilder(this.scene, this.camera, this.currentMapMesh);
             }
         });
 
-        // 4. MURS & TÉLÉPORTEURS (Depuis maps.js)
+        // 4. MURS & TÉLÉPORTEURS
         data.colliders.forEach(wall => {
             this.addCollider(wall.x, wall.y, wall.w, wall.h);
         });
-
         this.teleporters = data.teleporters || [];
 
-        // 5. CRÉATION DES NPCS
+        // 5. NPCS
         if (data.hasNPCs) {
             this.initNPCs();
+        }
+
+        // 6. GÉNÉRATION DES ARBRES (C'est ici la bonne place !)
+        // On vérifie le mapId qui est passé en argument de la fonction loadMap
+        if (mapId === "exterieur") {
+            const veg = new VegetationGenerator(this.scene, this);
+            veg.generateZone(-42, 34, -55, -6, 200);
+            veg.generateZone(-10, 42, 39, 10, 60);
+            veg.generateZone(-17, 48, 56, 40, 43);
         }
     }
 
     clearLevel() {
+        // Supprime le sol
         if (this.currentMapMesh) {
             this.scene.remove(this.currentMapMesh);
             this.currentMapMesh.geometry.dispose();
@@ -75,10 +88,21 @@ export class World {
             this.currentMapMesh = null;
         }
 
+        // Supprime les arbres
+        if (this.vegetation) {
+            this.vegetation.forEach(tree => {
+                this.scene.remove(tree);
+                if (tree.geometry) tree.geometry.dispose();
+                if (tree.material) tree.material.dispose();
+            });
+            this.vegetation = []; // Vide la liste
+        }
+
+        // Vide les listes de collisions
         this.colliders = [];
         this.teleporters = [];
 
-        // Suppression propre des NPCs
+        // Supprime les NPCs
         this.npcs.forEach(npc => {
             this.scene.remove(npc.mesh);
         });
@@ -102,20 +126,18 @@ export class World {
     initNPCs() {
         // Renard
         this.addNPC(
-            'Renard', 2, 0, './src/assets/biche.png', // Attention: image 'biche.png' pour le Renard ? À vérifier.
+            'Renard', 2, 0, './src/assets/biche.png', 
             ['./src/assets/renard_zoom.png', 'Merci d\'avoir éteint le feu !', 'Tu es un vrai héros.']
         );
-
         // Lapin
         this.addNPC(
-            'Lapin', -2, 0, '/lapinspeek.png',
-            ['/lapin_zoom.png', 'Attention, ça brûle par là-bas !', 'Vite, va chercher de l\'aide !']
+            'Lapin', -2, 0, './src/imgdialogue/lapinspeek.png',
+            ['./src/assets/lapin_zoom.png', 'Attention, ça brûle par là-bas !', 'Vite, va chercher de l\'aide !']
         );
-
         // Castor
         this.addNPC(
-            'Castor', 0, 2, '/castorspeek.png',
-            ['/castorspeek.png', 'Salut jeune scout, tu est bien brave pour être arrivé jusqu\'ici !']
+            'Castor', 0, 2, './src/imgdialogue/castorspeek.png',
+            ['./src/imgdialogue/castorspeek.png', 'Salut jeune scout, tu est bien brave pour être arrivé jusqu\'ici !']
         );
     }
 
@@ -127,7 +149,6 @@ export class World {
             side: THREE.DoubleSide
         }); 
 
-        // Chargement de la texture du sprite (dans le monde)
         const loader = new THREE.TextureLoader();
         loader.load(texturePath, (texture) => {
             texture.magFilter = THREE.NearestFilter;
@@ -140,7 +161,6 @@ export class World {
         mesh.position.set(x, y, 0.9); 
         this.scene.add(mesh);
 
-        // Extraction des données de dialogue
         const portraitUrl = dialogueData[0];
         const phrases = dialogueData.slice(1);
 

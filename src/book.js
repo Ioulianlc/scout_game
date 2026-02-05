@@ -256,7 +256,7 @@ export class Book {
     Object.assign(this.mapImgDiv.style, {
       width: "90%",
       height: "160px",
-      backgroundImage: "url('/map.png')",
+      backgroundImage: "url('./map.png')",
       backgroundSize: "100% 100%",
       border: "2px solid #5d4037",
       position: "relative",
@@ -370,14 +370,14 @@ export class Book {
         this.navWidget.style.display = "none";
       } else if (hasMap) {
         this.navWidget.style.display = "block";
-        this.navWidget.style.backgroundImage = "url('/map.png')";
+        this.navWidget.style.backgroundImage = "url('./map.png')";
         this.navWidget.style.backgroundSize = "450%";
         this.navWidget.id = "mini-map-hud";
         this.miniMarker.style.display = "block";
       } else if (hasBoussole) {
         this.navWidget.style.display = "block";
         this.navWidget.style.backgroundImage =
-          "url('./src/assets/boussole.png')";
+          "url('./boussole.png')";
         this.navWidget.style.backgroundSize = "contain";
         this.navWidget.id = "dynamic-compass";
         this.miniMarker.style.display = "none";

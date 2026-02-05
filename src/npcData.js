@@ -5,7 +5,7 @@ export const NPC_LIST = [
     x: 5,
     y: 2,
     dialogue: [
-      "./src/assets/biche_zoom.png",
+      "./bichedialogue.png",
       "Oh, j'ai tellement faim...",
       "Peux-tu me rapporter des baies de la clairière ?",
     ],
@@ -15,7 +15,7 @@ export const NPC_LIST = [
     x: -3,
     y: 1,
     dialogue: [
-      "./src/assets/lapin_zoom.png",
+      "./lapindialogue.png",
       "Salut ! Je cherche des glands pour l'hiver.",
       "Si tu m'en trouves 5, j'ai un truc pour toi !",
     ],
@@ -25,7 +25,7 @@ export const NPC_LIST = [
     x: 10,
     y: -5,
     dialogue: [
-      "./src/assets/renard_zoom.png",
+      "./renarddialogue.png",
       "Héhé... Belle carte que tu as là.",
       "Ça te dirait de l'échanger contre une boussole ?",
     ],
@@ -35,7 +35,7 @@ export const NPC_LIST = [
     x: 0,
     y: 8,
     dialogue: [
-      "./src/assets/scout_ami.png",
+      "./scout_ami.png",
       "Salut camarade ! On va faire un feu.",
       "Tiens, prends ces Chamallows pour le dessert !",
     ],
@@ -45,7 +45,7 @@ export const NPC_LIST = [
     x: -15,
     y: 0,
     dialogue: [
-      "./src/assets/chef_scout.png",
+      "./chef_scout.png",
       "Le pont est cassé ! Il faut agir vite.",
       "Prends cette hache pour récupérer du bois.",
     ],
@@ -55,7 +55,7 @@ export const NPC_LIST = [
     x: 20,
     y: 10,
     dialogue: [
-      "./src/assets/panneau_zoom.png",
+      "./sign.png",
       "DANGER : PONT CASSÉ",
       "Réparation nécessaire pour traverser la rivière.",
     ],

@@ -34,7 +34,7 @@ export class QuestManager {
         recompense: {
           name: "Boussole",
           desc: "Elle pointe vers le Nord.",
-          img: "/boussole.png",
+          img: "./boussole.png",
         },
         badgeId: "renard",
       },

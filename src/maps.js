@@ -2,7 +2,7 @@
 
 export const maps = {
     "exterieur": {
-        texture: '/map.png',
+        texture: './map.png',
         width: 192,
         height: 112,
         spawn: { x: -31, y: 47 },
@@ -33,7 +33,7 @@ export const maps = {
 
     "grotte": {
         // ... (suite du fichier pour la 2ème map)
-        texture: '/cave_map.png',
+        texture: './cave.png',
         width: 64, height: 64, spawn: { x: 0, y: -8 },
         colliders: [
             { x: -32, y: 0, w: 1, h: 64 },
