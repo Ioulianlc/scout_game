@@ -4,84 +4,115 @@ export class VegetationGenerator {
     constructor(scene, world) {
         this.scene = scene;
         this.world = world; 
-        this.trees = []; // Sert uniquement pour vérifier la distance entre les arbres lors de la génération
+        this.trees = []; 
         
-        // On charge l'image de l'arbre
         const loader = new THREE.TextureLoader();
-        // J'ai mis le chemin standard 'src/assets/'. Vérifie que ton image est bien là !
+
+        // 1. ARBRES & BUISSONS
         this.treeTexture = loader.load('./tree.png'); 
         this.treeTexture.magFilter = THREE.NearestFilter;
+        this.bushTexture = loader.load('./bush.png'); 
+        this.bushTexture.magFilter = THREE.NearestFilter;
+        this.fireTreeTexture = loader.load('./firetree.png'); 
+        this.fireTreeTexture.magFilter = THREE.NearestFilter;
+
+        // 2. GROS OBJETS
+        this.towerTexture = loader.load('./tower.png'); 
+        this.towerTexture.magFilter = THREE.NearestFilter;
+        this.sacredTreeTexture = loader.load('./sacredtree.png'); 
+        this.sacredTreeTexture.magFilter = THREE.NearestFilter;
+
+        // 3. CAMPEMENT
+        this.campfireTexture = loader.load('./feucamp.png');
+        this.campfireTexture.magFilter = THREE.NearestFilter;
+        
+        // 4. NOUVEAU : TENTE
+        this.tentTexture = loader.load('./tente.png');
+        this.tentTexture.magFilter = THREE.NearestFilter;
     }
 
-    /**
-     * Génère une forêt dans une zone rectangulaire
-     */
-    generateZone(minX, maxX, minY, maxY, count) {
+    // --- GÉNÉRATEURS DE ZONES ---
+    generateZone(minX, maxX, minY, maxY, count) { this.generateGeneric(minX, maxX, minY, maxY, count, 'tree'); }
+    generateBushes(minX, maxX, minY, maxY, count) { this.generateGeneric(minX, maxX, minY, maxY, count, 'bush'); }
+    generateFireZone(minX, maxX, minY, maxY, count) { this.generateGeneric(minX, maxX, minY, maxY, count, 'fire'); }
+
+    generateGeneric(minX, maxX, minY, maxY, count, type) {
         let planted = 0;
         let attempts = 0;
-
         while (planted < count && attempts < count * 5) {
             attempts++;
-
-            // 1. Position aléatoire
             const x = Math.random() * (maxX - minX) + minX;
             const y = Math.random() * (maxY - minY) + minY;
-
-            // 2. Vérification : Est-ce que c'est trop proche d'un autre arbre ?
             if (this.isTooClose(x, y)) continue;
 
-            // 3. On plante !
-            this.plantTree(x, y);
+            if (type === 'tree') this.plantTree(x, y);
+            else if (type === 'bush') this.plantBush(x, y);
+            else if (type === 'fire') this.plantFireTree(x, y);
             planted++;
         }
-        
-        console.log(`🌲 Forêt générée : ${planted} arbres plantés.`);
     }
 
     isTooClose(x, y) {
-        const minDistance = 2.5; 
-        
-        for (const tree of this.trees) {
-            const dx = tree.x - x;
-            const dy = tree.y - y;
-            const distance = Math.sqrt(dx*dx + dy*dy);
-            
-            if (distance < minDistance) {
-                return true; 
-            }
+        const minDistance = 2.0; 
+        for (const item of this.trees) {
+            const dx = item.x - x;
+            const dy = item.y - y;
+            if (Math.sqrt(dx*dx + dy*dy) < minDistance) return true; 
         }
         return false;
     }
 
-    plantTree(x, y) {
-        // A. Visuel (L'image de l'arbre)
-        const width = 3;
-        const height = 3; 
+    // --- PLANTEURS ---
 
-        const geometry = new THREE.PlaneGeometry(width, height);
+    plantTree(x, y) { this.createMesh(x, y, 3, 3, this.treeTexture, true); }
+    plantBush(x, y) { this.createMesh(x, y, 1.5, 1.5, this.bushTexture, false); }
+    plantFireTree(x, y) { this.createMesh(x, y, 3, 3, this.fireTreeTexture, true, 0xffaaaa); }
+    
+    plantTower(x, y) {
+        this.createMesh(x, y, 4, 6, this.towerTexture, false); 
+        this.world.addCollider(x, y, 3.5, 1.5); 
+    }
+
+    plantSacredTree(x, y) {
+        this.createMesh(x, y, 6, 6, this.sacredTreeTexture, false, 0xffd700);
+        this.world.addCollider(x, y, 2, 1); 
+    }
+
+    plantCampfire(x, y) {
+        this.createMesh(x, y, 1.5, 1.5, this.campfireTexture, false);
+        this.world.addCollider(x, y, 1, 1);
+    }
+
+    // --- NOUVEAU : TENTE ---
+    plantTent(x, y) {
+        // Une tente fait environ 3 de large et 2 de haut
+        const width = 2;
+        const height = 3;
+        
+        this.createMesh(x, y, width, height, this.tentTexture, false);
+        
+        // Collision : On bloque tout le bas de la tente (2.5 de large, 1 de haut)
+        this.world.addCollider(x, y, 1, 1.5); 
+    }
+
+    // --- UTILITAIRE ---
+    createMesh(x, y, w, h, texture, hasCollision, color = 0xffffff) {
+        const geometry = new THREE.PlaneGeometry(w, h);
         const material = new THREE.MeshBasicMaterial({ 
-            map: this.treeTexture, 
+            map: texture, 
             transparent: true,
-            alphaTest: 0.5 
+            alphaTest: 0.5,
+            color: color 
         });
         
         const mesh = new THREE.Mesh(geometry, material);
-        
-        // Z-Index : On utilise Y pour la profondeur
-        mesh.position.set(x, y + height/2, 1); 
+        mesh.position.set(x, y + h/2, 1); 
         this.scene.add(mesh);
 
-        // --- C'EST ICI QUE LA FUSION AGIT ---
-        // On ajoute le mesh à la liste du World pour qu'il puisse être supprimé au changement de map
-        if (this.world.vegetation) {
-            this.world.vegetation.push(mesh);
-        }
+        if (this.world.vegetation) this.world.vegetation.push(mesh);
+        if (hasCollision) this.world.addCollider(x, y, 1, 0.5); 
 
-        // B. Collision (Le tronc)
-        // Le tronc est un obstacle invisible en bas de l'arbre
-        this.world.addCollider(x, y, 1, 0.5); 
-
-        // C. Sauvegarde interne pour le calcul de distance
-        this.trees.push({ x, y, mesh });
+        this.trees.push({ x, y });
+        return mesh; 
     }
 }

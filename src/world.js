@@ -75,9 +75,60 @@ export class World {
         // On vérifie le mapId qui est passé en argument de la fonction loadMap
         if (mapId === "exterieur") {
             const veg = new VegetationGenerator(this.scene, this);
-            veg.generateZone(-42, 34, -55, -6, 200);
-            veg.generateZone(-10, 42, 39, 10, 60);
-            veg.generateZone(-17, 48, 56, 40, 43);
+
+            // veg.generateZone(min x,max x, min y, max y, nb arbre);
+            // Parcelle 1
+            veg.generateZone(-33, -10, -26, -6, 70);
+            // Parcelle 2
+            veg.generateZone(-8, 4, -26, -4, 40);
+            // Parcelle 3
+            veg.generateZone(-6, 7, -25, -19, 60);
+            // Parcelle 4
+            veg.generateZone( 6, 21, -16, -6, 60);
+            // Parcelle 5
+            veg.generateZone( 10, 30, -37, -19, 60);
+            // Parcelle 6
+            veg.generateZone( 9, 35, -55, -39, 60);
+            // Parcelle 7
+            veg.generateZone( -7, 7, -52, -28, 60);
+            // Parcelle 8
+            veg.generateZone( -31, 10, -44, -28, 60);
+            // Parcelle 9
+            veg.generateZone( -43, -34, -44, -27, 60);
+            // Parcelle 10
+            veg.generateZone( -95, -10, -55, -47, 200);
+            // Parcelle 11
+            veg.generateZone( -7, 7, -55, -55, 20);
+
+            // Parcelles entouré de bush
+            veg.generateZone( -46, -38, -15, -12, 20);
+            veg.generateZone( -20, -14, 4, -1, 4);
+            veg.generateZone( -4, 25, 45, 48, 60);
+
+            // Bush
+            veg.generateBushes(-28, -23, 47, 49, 50);
+            veg.generateBushes(-5, 34, 0, 42, 300);
+            veg.generateBushes(-26, 50, -11, -1, 40);
+
+            // Firetree
+            veg.generateFireZone(54, 95, 6, 55, 180);
+            veg.generateFireZone(39, 52, 5, 14, 20);
+
+            // Tower
+            veg.plantTower(-59, -33);
+
+            // Sacredtree
+            veg.plantSacredTree(-28, 45);
+
+            // Camp fire
+            veg.plantCampfire(-28, 42);
+
+            // Tente
+            veg.plantTent(-35, 41);
+            veg.plantTent(-22, 48);
+            veg.plantTent(-31, 50);
+
+            
         }
     }
 
