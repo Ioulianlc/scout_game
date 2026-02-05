@@ -179,14 +179,9 @@ class Game {
       const px = this.scout.mesh.position.x;
       const py = this.scout.mesh.position.y;
 
-      const isInMaze = (
-          px >= this.mazeZone.minX && 
-          px <= this.mazeZone.maxX && 
-          py >= this.mazeZone.minY && 
-          py <= this.mazeZone.maxY
-      );
+      const isDarkZone = (this.world.currentMapId === 'grotte'); 
 
-      if (isInMaze) {
+      if (isDarkZone) {
           this.lightSystem.enable(); 
           this.lightSystem.update(this.scout.mesh.position);
       } else {

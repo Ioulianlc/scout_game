@@ -27,6 +27,8 @@ export class World {
     // --- C'EST ICI QUE DOIT ÊTRE LA LOGIQUE DES ARBRES ---
     loadMap(mapId) {
         console.log(`🌍 Chargement de la carte : ${mapId}`);
+
+        this.currentMapId = mapId;
         const data = maps[mapId];
 
         if (!data) {
@@ -126,18 +128,18 @@ export class World {
     initNPCs() {
         // Renard
         this.addNPC(
-            'Renard', 2, 0, './src/assets/biche.png', 
-            ['./src/assets/renard_zoom.png', 'Merci d\'avoir éteint le feu !', 'Tu es un vrai héros.']
+            'Renard', 2, 0, './renarddialogue.png', 
+            ['./renarddialogue.png', 'Merci d\'avoir éteint le feu !', 'Tu es un vrai héros.']
         );
-        // Lapin
+        // ecureuil
         this.addNPC(
-            'Lapin', -2, 0, './src/imgdialogue/lapinspeek.png',
-            ['./src/assets/lapin_zoom.png', 'Attention, ça brûle par là-bas !', 'Vite, va chercher de l\'aide !']
+            'Ecureuil', -2, 0, './ecureuildialogue.png',
+            ['./ecureuildialogue.png', 'Attention, ça brûle par là-bas !', 'Vite, va chercher de l\'aide !']
         );
         // Castor
         this.addNPC(
-            'Castor', 0, 2, './src/imgdialogue/castorspeek.png',
-            ['./src/imgdialogue/castorspeek.png', 'Salut jeune scout, tu est bien brave pour être arrivé jusqu\'ici !']
+            'Castor', 0, 2, './castorspeek.png',
+            ['./castorspeek.png', 'Salut jeune scout, tu est bien brave pour être arrivé jusqu\'ici !']
         );
     }
 

@@ -25,7 +25,7 @@ export const maps = {
             { 
                 x: -75, y: 0, // Utilise le curseur rouge pour ajuster ça !
                 targetMap: "grotte", 
-                targetX: 0, targetY: -8 
+                targetX: -3, targetY: -12
             }
         ],
         hasNPCs: true 
@@ -43,9 +43,9 @@ export const maps = {
         ],
         teleporters: [
             { 
-                x: 0, y: -10, 
+                x: -3, y: -15, 
                 targetMap: "exterieur", 
-                targetX: -10, targetY: 8 
+                targetX: -75, targetY: -3
             }   
         ],
         hasNPCs: false
