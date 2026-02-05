@@ -2,7 +2,7 @@
 
 export const maps = {
     "exterieur": {
-        texture: './src/assets/map.png',
+        texture: '/map.png',
         width: 192,
         height: 112,
         spawn: { x: -31, y: 47 },
@@ -23,7 +23,7 @@ export const maps = {
 
         teleporters: [
             { 
-                x: -10, y: 10, // Utilise le curseur rouge pour ajuster ça !
+                x: -75, y: 0, // Utilise le curseur rouge pour ajuster ça !
                 targetMap: "grotte", 
                 targetX: 0, targetY: -8 
             }
@@ -33,7 +33,7 @@ export const maps = {
 
     "grotte": {
         // ... (suite du fichier pour la 2ème map)
-        texture: './src/assets/cave_map.png',
+        texture: '/cave_map.png',
         width: 64, height: 64, spawn: { x: 0, y: -8 },
         colliders: [
             { x: -32, y: 0, w: 1, h: 64 },
@@ -42,7 +42,11 @@ export const maps = {
             { x: 0, y: -32, w: 64, h: 1 }
         ],
         teleporters: [
-            { x: 0, y: -10, targetMap: "exterieur", targetX: -10, targetY: 8 }
+            { 
+                x: 0, y: -10, 
+                targetMap: "exterieur", 
+                targetX: -10, targetY: 8 
+            }   
         ],
         hasNPCs: false
     }

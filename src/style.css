@@ -1,4 +1,3 @@
-
 /* src/style.css */
 * {
     margin: 0;
@@ -24,7 +23,9 @@ html, body {
     display: block; /* Évite un petit espace blanc en bas */
 }
 
-/* Le reste de ton CSS pour l'interface... */
+/* --- INTERFACE UTILISATEUR (UI) --- */
+
+/* 1. Boite de dialogue (Déjà présente) */
 #dialogue-box {
     display: none;
     position: absolute;
@@ -40,3 +41,12 @@ html, body {
     font-family: sans-serif;
     z-index: 10;
 }
+
+/* ATTENTION : 
+   Le code JS fait référence à des éléments qui n'ont pas encore de style ici :
+   - #interaction-prompt (Le message "Appuyez sur E")
+   - #dialogue-screen (L'écran complet de dialogue avec portrait)
+   - #dynamic-compass (La boussole)
+   
+   Si tu as le code CSS pour ces éléments, envoie-le moi pour que je complète ce fichier !
+*/

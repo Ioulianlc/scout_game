@@ -8,7 +8,7 @@ export class VegetationGenerator {
         
         // On charge l'image de l'arbre une seule fois pour optimiser
         const loader = new THREE.TextureLoader();
-        this.treeTexture = loader.load('./src/assets/tree.png'); // Mets ton image d'arbre ici !
+        this.treeTexture = loader.load('/tree.png'); // Mets ton image d'arbre ici !
         this.treeTexture.magFilter = THREE.NearestFilter;
     }
 

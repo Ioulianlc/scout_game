@@ -9,9 +9,20 @@
   </head>
   <body>
     <canvas class="webgl"></canvas>
+    
     <div id="dialogue-box"></div>
 
-
+    <div id="dynamic-compass" style="
+        display: none; /* Le JS le passera en block quand on aura l'objet */
+        position: fixed; 
+        top: 20px; 
+        right: 20px; 
+        width: 60px; 
+        height: 60px; 
+        background: url('./src/assets/boussole.png') no-repeat center center; 
+        background-size: contain;
+        z-index: 1500;
+    "></div>
 
     <div id="interaction-prompt" style="display:none; position:fixed; bottom:20%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); padding:10px; color:white; border-radius:5px;"></div>
 
@@ -24,42 +35,39 @@
     </div>
 
     <div id="debug-coords" style="
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    color: #00ff00; /* Vert hacker */
-    font-family: 'Courier New', Courier, monospace;
-    font-weight: bold;
-    font-size: 16px;
-    background: rgba(0, 0, 0, 0.5);
-    padding: 8px;
-    border-radius: 4px;
-    pointer-events: none; /* Pour cliquer au travers */
-    z-index: 2000;
-">
-    POS: 0, 0
-</div>
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        color: #00ff00; 
+        font-family: 'Courier New', Courier, monospace;
+        font-weight: bold;
+        font-size: 16px;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 8px;
+        border-radius: 4px;
+        pointer-events: none; 
+        z-index: 2000;
+    ">
+        POS: 0, 0
+    </div>
 
-<div id="mouse-coords" style="
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    color: #00ffff; /* Cyan */
-    font-family: 'Courier New', Courier, monospace;
-    font-weight: bold;
-    font-size: 16px;
-    background: rgba(0, 0, 0, 0.5);
-    padding: 8px;
-    border-radius: 4px;
-    pointer-events: none;
-    z-index: 2000;
-">
-    MOUSE: 0, 0
-</div>
+    <div id="mouse-coords" style="
+        position: fixed;
+        top: 10px;
+        right: 100px; /* Décalé pour ne pas gêner la boussole */
+        color: #00ffff; 
+        font-family: 'Courier New', Courier, monospace;
+        font-weight: bold;
+        font-size: 16px;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 8px;
+        border-radius: 4px;
+        pointer-events: none;
+        z-index: 2000;
+    ">
+        MOUSE: 0, 0
+    </div>
 
     <script type="module" src="/src/main.js"></script>
-
-
-
   </body>
 </html>

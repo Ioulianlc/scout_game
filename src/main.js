@@ -4,6 +4,10 @@ import { World } from "./world.js";
 import { Inputs } from "./inputs.js";
 import { LightSystem } from "./lightSystem.js";
 import { VegetationGenerator } from "./vegetation.js";
+import { AudioManager } from "./audioManager.js";
+// --- NOUVEAUX IMPORTS (VENANT DU SECOND CODE) ---
+import { Book } from "./book.js";
+import { QuestManager } from "./questManager.js";
 
 class Game {
   constructor() {
@@ -12,7 +16,7 @@ class Game {
       canvas: this.canvas,
       alpha: true,
     });
-    // On ne définit pas la taille ici, handleResize s'en chargera
+    // On garde la gestion du pixel ratio du Main
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     this.scene = new THREE.Scene();
@@ -21,28 +25,44 @@ class Game {
     this.setupCamera();
 
     this.inputs = new Inputs();
-    
+
+    this.audioManager = new AudioManager();
+
+    this.audioManager.load('forest_theme', '.musiquetheme/.mp3');
+
+    // 2. Astuce pour lancer la musique au premier mouvement
+    // "once: true" veut dire que cet événement ne se déclenchera qu'une seule fois
+    window.addEventListener('keydown', () => {
+        // On lance la musique d'ambiance
+        this.audioManager.playMusic('forest_theme', 0.3); // Volume 0.3 (douce)
+    }, { once: true });
+        
     this.scout = new Scout(this.scene);
 
-    // --- MODIFICATION 1 : On passe 'scout' au World pour qu'il puisse le gérer ---
+    // On garde l'initialisation du Main (qui passe 'scout' au World pour les téléporteurs)
     this.world = new World(this.scene, this.camera, this.scout); 
     
-    // --- GÉNÉRATION D'ARBRES ---
-    // Note : Pour l'instant, ces arbres resteront affichés même si tu changes de carte.
-    // Idéalement, il faudra déplacer ça dans world.js plus tard.
+    // --- INTEGRATION : BOOK & QUEST MANAGER ---
+    this.book = new Book(this);
+    this.questManager = new QuestManager(this);
+
+    // Objet de départ (Second Code)
+    this.book.addItem("Carte", "La carte de la forêt.", null);
+
+    // --- GÉNÉRATION D'ARBRES (MAIN) ---
     const vegetation = new VegetationGenerator(this.scene, this.world);
     vegetation.generateZone(-42, 34, -55, -6, 200);
     vegetation.generateZone(-10, 42, 39, 10, 60);
     vegetation.generateZone(-17, 48, 56, 40, 43);
 
-    // --- SYSTÈME DE LUMIÈRE ---
+    // --- SYSTÈME DE LUMIÈRE (MAIN) ---
     this.lightSystem = new LightSystem(this.scene);
 
-    // --- ZONE DU LABYRINTHE ---
+    // --- ZONE DU LABYRINTHE (MAIN) ---
     this.mazeZone = {
         minX: -95,  
         maxX: -52,  
-        minY: -1,  
+        minY: -1,   
         maxY: 30   
     };
 
@@ -51,9 +71,11 @@ class Game {
     this.currentNPC = null;
     this.dialogueIndex = 0;
 
-    // --- DEBUG HUD ---
+    // --- DEBUG HUD & INPUTS FUSIONNÉS ---
     this.coordDisplay = document.getElementById("debug-coords");
+    
     window.addEventListener('keydown', (e) => {
+        // Debug F3 (Main)
         if (e.code === 'F3') {
             e.preventDefault();
             if (this.coordDisplay) {
@@ -61,9 +83,16 @@ class Game {
                     this.coordDisplay.style.display === 'none' ? 'block' : 'none';
             }
         }
+
+        // Inventaire "I" (Second Code)
+        if (e.key.toLowerCase() === "i") {
+            if (this.currentNPC) return; // Pas d'inventaire pendant un dialogue
+            this.book.toggle();
+            this.isPaused = this.book.isOpen;
+        }
     });
 
-    // --- GESTION DU REDIMENSIONNEMENT (Anti-Étirement) ---
+    // --- GESTION DU REDIMENSIONNEMENT (Main) ---
     window.addEventListener('resize', () => this.handleResize());
 
     this.clock = new THREE.Clock();
@@ -71,31 +100,20 @@ class Game {
   }
 
   setupCamera() {
-    this.frustumSize = 100; // J'ai remis 10 (zoom standard) car 100 est très loin
-    
-    // On crée une caméra vide, elle sera configurée par handleResize
+    this.frustumSize = 10; 
     this.camera = new THREE.OrthographicCamera(0, 0, 0, 0, 0.1, 100);
     this.camera.position.set(0, 0, 10);
     this.camera.lookAt(0, 0, 0);
-
-    // On force le calcul des proportions dès le démarrage
     this.handleResize();
   }
 
   handleResize() {
-    // 1. Calcul du ratio de l'écran (Largeur / Hauteur)
     const aspect = window.innerWidth / window.innerHeight;
-
-    // 2. Mise à jour des bordures de la caméra
     this.camera.left = (-this.frustumSize * aspect) / 2;
     this.camera.right = (this.frustumSize * aspect) / 2;
     this.camera.top = this.frustumSize / 2;
     this.camera.bottom = -this.frustumSize / 2;
-
-    // 3. Application des changements
     this.camera.updateProjectionMatrix();
-
-    // 4. Redimensionnement du rendu
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
@@ -109,21 +127,33 @@ class Game {
   update(deltaTime) {
     this.checkProximity();
 
-    if (!this.isPaused) {
-      this.scout.update(deltaTime, this.inputs, this.world.colliders);
+    // --- INTEGRATION : MISE A JOUR LIVRE & BOUSSOLE ---
+    if (this.book) {
+        this.book.updatePlayerPositionOnMap(
+          this.scout.mesh.position.x,
+          this.scout.mesh.position.y,
+        );
+    }
 
-      // --- 1. MOUVEMENT FLUIDE CAMÉRA ---
+    // Animation de la boussole (Second Code)
+    const compassUI = document.getElementById("dynamic-compass");
+    if (compassUI && compassUI.style.display !== "none") {
+        const wobble = Math.sin(Date.now() * 0.005) * 4;
+        compassUI.style.transform = `rotate(${wobble}deg)`;
+    }
+
+    if (!this.isPaused) {
+      this.scout.update(deltaTime, this.inputs, this.world.colliders, this.audioManager);
+
+      // --- CAMÉRA (Logique du Main conservée pour les limites de map) ---
       let targetX = this.camera.position.x + (this.scout.mesh.position.x - this.camera.position.x) * 5 * deltaTime;
       let targetY = this.camera.position.y + (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
 
-      // --- 2. BLOCAGE CAMÉRA (Clamping) ---
       const aspect = window.innerWidth / window.innerHeight;
       const camHalfHeight = this.frustumSize / 2;
       const camHalfWidth = (this.frustumSize * aspect) / 2;
 
-      // Limites basées sur ta map (192x112 -> demi-taille 96x56)
-      // Note : Si tu changes de map pour une plus petite (Grotte), il faudra adapter ces valeurs !
-      // Pour l'instant on garde celles de la map principale.
+      // Limites basées sur la map principale (Main)
       const limitX = 96 - camHalfWidth; 
       const limitY = 56 - camHalfHeight;
 
@@ -139,36 +169,25 @@ class Game {
           this.camera.position.y = 0;
       }
 
-      // --- MODIFICATION 2 : SYSTÈME DE TÉLÉPORTATION ---
-      // On vérifie si le joueur marche sur un téléporteur
+      // --- SYSTÈME DE TÉLÉPORTATION (Main) ---
       if (this.world.teleporters) {
           const px = this.scout.mesh.position.x;
           const py = this.scout.mesh.position.y;
 
           for (const tp of this.world.teleporters) {
                const dist = Math.sqrt((px - tp.x)**2 + (py - tp.y)**2);
-               
-               // Si distance < 1.0 (on est dessus)
                if (dist < 1.0) {
-                   console.log("Teleportation vers :", tp.targetMap);
-                   
-                   // A. Charger la nouvelle carte
+                   // console.log("Teleportation vers :", tp.targetMap);
                    this.world.loadMap(tp.targetMap);
-                   
-                   // B. Déplacer le joueur
                    this.scout.mesh.position.set(tp.targetX, tp.targetY, 0);
-
-                   // C. Reset immédiat de la caméra pour éviter de voir le fond vert
                    this.camera.position.x = tp.targetX;
                    this.camera.position.y = tp.targetY;
-                   
-                   break; // On arrête pour ne pas téléporter en boucle
+                   break;
                }
           }
       }
-      // ------------------------------------------------
 
-      // --- LOGIQUE NUIT / LABYRINTHE ---
+      // --- LOGIQUE NUIT / LABYRINTHE (Main) ---
       const px = this.scout.mesh.position.x;
       const py = this.scout.mesh.position.y;
 
@@ -200,8 +219,10 @@ class Game {
     }
 
     if (this.inputs.keys.enter && this.isPaused) {
-      this.nextStep();
-      this.inputs.keys.enter = false;
+       if (this.currentNPC) {
+           this.nextStep();
+       }
+       this.inputs.keys.enter = false;
     }
   }
 
@@ -212,7 +233,6 @@ class Game {
     this.nearestNPC = null;
     const prompt = document.getElementById("interaction-prompt");
 
-    // Vérification de sécurité au cas où world.npcs est vide
     if (this.world.npcs) {
         for (const npc of this.world.npcs) {
           const dist = this.scout.mesh.position.distanceTo(npc.position);
@@ -251,7 +271,7 @@ class Game {
     } else {
       textElement.innerText = "Que veux-tu faire ?";
       optionsElement.innerHTML = `
-        <button onclick="window.game.handleChoice('accept')">Accepter la mission</button>
+        <button onclick="window.game.handleChoice('accept')">Accepter / Donner</button>
         <button onclick="window.game.handleChoice('close')">Partir</button>
       `;
     }
@@ -262,10 +282,48 @@ class Game {
     this.updateDialogueText();
   }
 
+  // --- INTEGRATION : NOUVELLE LOGIQUE DE CHOIX (Second Code) ---
   handleChoice(choice) {
-    if (choice === 'accept') {
-        alert("Mission acceptée ! Vous recevez un objet.");
+    if (choice === "accept") {
+      const npcName = this.currentNPC.name;
+
+      if (npcName === "Biche") {
+        this.questManager.acceptQuest("baie");
+      } else if (npcName === "Ecureuil" || npcName === "Lapin") {
+        this.questManager.acceptQuest("gland");
+      } else if (npcName === "Renard") {
+        const hasMap = this.book.inventory.find((i) => i && i.name === "Carte");
+        if (hasMap) {
+          this.questManager.acceptQuest("bousole");
+          this.book.removeItem("Carte");
+          this.questManager.completeQuest("bousole");
+          // FORCER LA MISE A JOUR VISUELLE DE LA BOUSSOLE
+          this.book.updateUI();
+        } else {
+          alert("Le Renard ricane : 'Pas de carte, pas de boussole !'");
+        }
+      } else if (npcName === "ChefScout") {
+        this.questManager.acceptQuest("scout");
+      } else if (npcName === "ScoutAmi") {
+        this.questManager.completeQuest("scout");
+        this.book.updateUI();
+      } else if (npcName === "Castor") {
+        const hasChamalow = this.book.inventory.find(
+          (i) => i && i.name === "Chamalow",
+        );
+        if (hasChamalow) {
+          this.questManager.acceptQuest("chamalow");
+          this.book.removeItem("Chamalow");
+          this.questManager.completeQuest("chamalow");
+          this.book.updateUI();
+        } else {
+          alert("Mme. Castor attend ses chamalows...");
+        }
+      } else if (npcName === "Panneau") {
+        this.questManager.acceptQuest("pont");
+      }
     }
+
     document.getElementById("dialogue-screen").style.display = "none";
     this.isPaused = false;
     this.currentNPC = null;
