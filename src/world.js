@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { NPC_LIST } from "./npcData.js";
 
 export class World {
   constructor(scene) {

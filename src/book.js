@@ -3,8 +3,6 @@ export class Book {
   constructor(game) {
     this.game = game;
     this.isOpen = false;
-
-    // --- DONNÉES DES BADGES ---
     this.badges = [
       {
         id: "biche",
@@ -49,21 +47,51 @@ export class Book {
         unlocked: false,
       },
     ];
-
     this.inventory = [null, null, null, null];
-    this.quests = [
-      {
-        titre: "La Noisette Dorée",
-        demandeur: "Mme Écureuil",
-        status: "En cours",
-      },
-    ];
-
+    this.quests = [];
     this.initUI();
   }
 
   initUI() {
-    // Conteneur principal du livre
+    // --- WIDGET DE NAVIGATION (HAUT DROITE) ---
+    this.navWidget = document.createElement("div");
+    Object.assign(this.navWidget.style, {
+      position: "fixed",
+      top: "20px",
+      right: "20px",
+      width: "120px",
+      height: "120px",
+      zIndex: "5000",
+      display: "none",
+      border: "4px solid #5d4037",
+      borderRadius: "50%",
+      backgroundColor: "#3b7d4f",
+      boxShadow: "0 0 15px rgba(0,0,0,0.5)",
+      overflow: "hidden",
+      pointerEvents: "none",
+      backgroundRepeat: "no-repeat",
+    });
+
+    // Point rouge fixe au centre pour la mini-map zoomée
+    this.miniMarker = document.createElement("div");
+    Object.assign(this.miniMarker.style, {
+      position: "absolute",
+      top: "50%",
+      left: "50%",
+      width: "8px",
+      height: "8px",
+      backgroundColor: "red",
+      borderRadius: "50%",
+      border: "1px solid white",
+      transform: "translate(-50%, -50%)", // Centre parfaitement le point
+      zIndex: "5001",
+      display: "none",
+    });
+
+    this.navWidget.appendChild(this.miniMarker);
+    document.body.appendChild(this.navWidget);
+
+    // --- LE LIVRE ---
     this.bookUI = document.createElement("div");
     this.bookUI.id = "scoutBook";
     Object.assign(this.bookUI.style, {
@@ -84,7 +112,6 @@ export class Book {
       zIndex: "2000",
     });
 
-    // Tooltip pour les descriptions
     this.tooltip = document.createElement("div");
     Object.assign(this.tooltip.style, {
       position: "fixed",
@@ -119,17 +146,13 @@ export class Book {
       flexDirection: "column",
       alignItems: "center",
     });
-
     leftPage.innerHTML =
       '<h2 style="margin:0 0 10px 0; border-bottom:2px solid #3e2723; width:100%; text-align:center;">JOUEUR</h2>';
 
-    // 1. INVENTAIRE (HAUT)
     const itemsContainer = document.createElement("div");
-    Object.assign(itemsContainer.style, {
-      display: "flex",
-      gap: "10px",
-      marginBottom: "10px",
-    });
+    itemsContainer.style.display = "flex";
+    itemsContainer.style.gap = "10px";
+    itemsContainer.style.marginBottom = "10px";
     this.itemSlotsDOM = [];
     for (let i = 0; i < 4; i++) {
       const slot = document.createElement("div");
@@ -149,14 +172,11 @@ export class Book {
     }
     leftPage.appendChild(itemsContainer);
 
-    // 2. PERSONNAGE (MILIEU)
     const charContainer = document.createElement("div");
-    Object.assign(charContainer.style, {
-      flex: "1",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-    });
+    charContainer.style.flex = "1";
+    charContainer.style.display = "flex";
+    charContainer.style.justifyContent = "center";
+    charContainer.style.alignItems = "center";
     const playerSprite = document.createElement("div");
     Object.assign(playerSprite.style, {
       width: "128px",
@@ -169,7 +189,6 @@ export class Book {
     charContainer.appendChild(playerSprite);
     leftPage.appendChild(charContainer);
 
-    // 3. BADGES (BAS)
     this.badgeContainer = document.createElement("div");
     Object.assign(this.badgeContainer.style, {
       height: "50px",
@@ -190,10 +209,21 @@ export class Book {
         opacity: "0.3",
         backgroundSize: "cover",
       });
+      bDiv.addEventListener("mouseenter", () => {
+        this.tooltip.style.display = "block";
+        this.tooltip.innerHTML = `<strong>${badge.name}</strong><br>${badge.unlocked ? badge.desc : "Verrouillé"}`;
+      });
+      bDiv.addEventListener("mousemove", (e) => {
+        this.tooltip.style.left = e.clientX + 15 + "px";
+        this.tooltip.style.top = e.clientY + 15 + "px";
+      });
+      bDiv.addEventListener(
+        "mouseleave",
+        () => (this.tooltip.style.display = "none"),
+      );
       this.badgeContainer.appendChild(bDiv);
     });
     leftPage.appendChild(this.badgeContainer);
-
     this.bookUI.appendChild(leftPage);
   }
 
@@ -211,7 +241,6 @@ export class Book {
       flexDirection: "column",
     });
 
-    // CARTE
     const mapSection = document.createElement("div");
     Object.assign(mapSection.style, {
       flex: "1.2",
@@ -257,7 +286,6 @@ export class Book {
     mapSection.appendChild(this.noMapMsg);
     rightPage.appendChild(mapSection);
 
-    // QUÊTES
     const questSection = document.createElement("div");
     Object.assign(questSection.style, {
       flex: "1",
@@ -295,27 +323,26 @@ export class Book {
   toggle() {
     this.isOpen = !this.isOpen;
     this.bookUI.style.display = this.isOpen ? "block" : "none";
-    if (this.isOpen) this.updateUI();
+    this.updateUI();
   }
 
   updateUI() {
-    // Quêtes
+    // 1. Quêtes
     this.questListDiv.innerHTML =
       this.quests
         .map(
           (q) => `
-      <div style="border-bottom:1px dashed #8c7b70; padding:5px 0; font-size:13px">
-        <strong>${q.titre}</strong> - <span style="color:#d35400">${q.status}</span>
+      <div style="border-bottom:1px dashed #8c7b70; padding:8px 0; font-size:13px">
+        <div style="display:flex; justify-content:space-between;">
+            <strong>${q.titre}</strong>
+            <span style="color:${q.status === "Terminée" ? "#27ae60" : "#d35400"}; font-weight:bold;">${q.status}</span>
+        </div>
+        <div style="font-style:italic; color:#5d4037; margin-top:2px;">${q.description || ""}</div>
       </div>`,
         )
         .join("") || "Aucune quête.";
 
-    // Carte
-    const hasMap = this.inventory.some((item) => item && item.name === "Carte");
-    this.mapImgDiv.style.display = hasMap ? "block" : "none";
-    this.noMapMsg.style.display = hasMap ? "none" : "block";
-
-    // Inventaire
+    // 2. Inventaire
     this.inventory.forEach((item, i) => {
       const slot = this.itemSlotsDOM[i];
       if (item) {
@@ -328,6 +355,36 @@ export class Book {
         slot.style.border = "2px dashed #8c7b70";
       }
     });
+
+    // 3. Logique Carte & Boussole
+    const hasMap = this.inventory.some((item) => item && item.name === "Carte");
+    const hasBoussole = this.inventory.some(
+      (item) => item && item.name === "Boussole",
+    );
+
+    this.mapImgDiv.style.display = hasMap ? "block" : "none";
+    this.noMapMsg.style.display = hasMap ? "none" : "block";
+
+    if (this.navWidget) {
+      if (this.isOpen) {
+        this.navWidget.style.display = "none";
+      } else if (hasMap) {
+        this.navWidget.style.display = "block";
+        this.navWidget.style.backgroundImage = "url('./src/assets/MAP_V1.png')";
+        this.navWidget.style.backgroundSize = "450%";
+        this.navWidget.id = "mini-map-hud";
+        this.miniMarker.style.display = "block";
+      } else if (hasBoussole) {
+        this.navWidget.style.display = "block";
+        this.navWidget.style.backgroundImage =
+          "url('./src/assets/boussole.png')";
+        this.navWidget.style.backgroundSize = "contain";
+        this.navWidget.id = "dynamic-compass";
+        this.miniMarker.style.display = "none";
+      } else {
+        this.navWidget.style.display = "none";
+      }
+    }
   }
 
   addItem(name, desc, img) {
@@ -340,6 +397,16 @@ export class Book {
     return false;
   }
 
+  removeItem(itemName) {
+    const index = this.inventory.findIndex(
+      (item) => item && item.name === itemName,
+    );
+    if (index !== -1) {
+      this.inventory[index] = null;
+      this.updateUI();
+    }
+  }
+
   unlockBadge(badgeId) {
     const badge = this.badges.find((b) => b.id === badgeId);
     if (badge) {
@@ -350,14 +417,29 @@ export class Book {
   }
 
   updatePlayerPositionOnMap(playerX, playerY) {
-    const worldW = 192; // Largeur de ta map dans world.js
-    const worldH = 112; // Hauteur de ta map dans world.js
+    const worldW = 192;
+    const worldH = 112;
+
+    // Calcul des pourcentages de position (0 à 100)
     let posX = ((playerX + worldW / 2) / worldW) * 100;
     let posY = (1 - (playerY + worldH / 2) / worldH) * 100;
 
+    // 1. CARTE DU LIVRE : Le point bouge sur l'image fixe
     if (this.playerMarker) {
       this.playerMarker.style.left = posX + "%";
       this.playerMarker.style.top = posY + "%";
+    }
+
+    // 2. MINI-MAP HUD : Le point est FIXE au centre, l'image bouge derrière
+    if (this.navWidget && this.navWidget.id === "mini-map-hud") {
+      // Le point rouge ne doit JAMAIS quitter le centre du widget
+      this.miniMarker.style.left = "50%";
+      this.miniMarker.style.top = "50%";
+
+      // On déplace le fond de la carte.
+      // En CSS, background-position: X% Y% aligne le point X% de l'image avec le point X% du conteneur.
+      // C'est parfait pour centrer le zoom sur le joueur.
+      this.navWidget.style.backgroundPosition = `${posX}% ${posY}%`;
     }
   }
 }

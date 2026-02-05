@@ -3,6 +3,7 @@ import { Scout } from "./scout.js";
 import { World } from "./world.js";
 import { Inputs } from "./inputs.js";
 import { Book } from "./book.js";
+import { QuestManager } from "./questManager.js";
 
 class Game {
   constructor() {
@@ -24,12 +25,11 @@ class Game {
     this.scout = new Scout(this.scene);
 
     this.book = new Book(this);
+    this.questManager = new QuestManager(this);
 
-    // --- TEST : DONNER LA CARTE AU DÉPART ---
-    // On lui donne la carte dès le début pour tester le point rouge
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    this.book.addItem("Carte", "La carte de la forêt.");
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Objet de départ
+    this.book.addItem("Carte", "La carte de la forêt.", null);
+
     this.isPaused = false;
     this.currentNPC = null;
     this.dialogueIndex = 0;
@@ -80,13 +80,19 @@ class Game {
   update(deltaTime) {
     this.checkProximity();
 
-    // MISE À JOUR DU LIVRE (Même si le jeu est en pause, on met à jour la position)
-    // Cela permet au point rouge d'être bien placé quand on ouvre le livre
     if (this.book) {
       this.book.updatePlayerPositionOnMap(
         this.scout.mesh.position.x,
         this.scout.mesh.position.y,
       );
+    }
+
+    // --- LOGIQUE ANIMATION BOUSSOLE ---
+    const compassUI = document.getElementById("dynamic-compass");
+    // On vérifie si l'élément existe ET s'il est visible
+    if (compassUI && compassUI.style.display !== "none") {
+      const wobble = Math.sin(Date.now() * 0.005) * 4;
+      compassUI.style.transform = `rotate(${wobble}deg)`;
     }
 
     if (!this.isPaused) {
@@ -98,7 +104,9 @@ class Game {
         (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
 
       if (this.coordDisplay) {
-        this.coordDisplay.innerText = `X: ${this.scout.mesh.position.x.toFixed(1)} | Y: ${this.scout.mesh.position.y.toFixed(1)}`;
+        this.coordDisplay.innerText = `X: ${this.scout.mesh.position.x.toFixed(
+          1,
+        )} | Y: ${this.scout.mesh.position.y.toFixed(1)}`;
       }
     }
 
@@ -158,7 +166,7 @@ class Game {
     } else {
       textElement.innerText = "Que veux-tu faire ?";
       optionsElement.innerHTML = `
-        <button onclick="window.game.handleChoice('accept')">Accepter la mission</button>
+        <button onclick="window.game.handleChoice('accept')">Accepter / Donner</button>
         <button onclick="window.game.handleChoice('close')">Partir</button>
       `;
     }
@@ -171,10 +179,43 @@ class Game {
 
   handleChoice(choice) {
     if (choice === "accept") {
-      alert("Mission acceptée ! Vous recevez une récompense.");
-      this.book.addItem("Branche", "Un morceau de bois solide.", null);
-      // Exemple : On débloque aussi un badge pour avoir accepté une mission
-      this.book.unlockBadge("biche");
+      const npcName = this.currentNPC.name;
+
+      if (npcName === "Biche") {
+        this.questManager.acceptQuest("baie");
+      } else if (npcName === "Ecureuil" || npcName === "Lapin") {
+        this.questManager.acceptQuest("gland");
+      } else if (npcName === "Renard") {
+        const hasMap = this.book.inventory.find((i) => i && i.name === "Carte");
+        if (hasMap) {
+          this.questManager.acceptQuest("bousole");
+          this.book.removeItem("Carte");
+          this.questManager.completeQuest("bousole");
+          // FORCER LA MISE A JOUR VISUELLE DE LA BOUSSOLE
+          this.book.updateUI();
+        } else {
+          alert("Le Renard ricane : 'Pas de carte, pas de boussole !'");
+        }
+      } else if (npcName === "ChefScout") {
+        this.questManager.acceptQuest("scout");
+      } else if (npcName === "ScoutAmi") {
+        this.questManager.completeQuest("scout");
+        this.book.updateUI();
+      } else if (npcName === "Castor") {
+        const hasChamalow = this.book.inventory.find(
+          (i) => i && i.name === "Chamalow",
+        );
+        if (hasChamalow) {
+          this.questManager.acceptQuest("chamalow");
+          this.book.removeItem("Chamalow");
+          this.questManager.completeQuest("chamalow");
+          this.book.updateUI();
+        } else {
+          alert("Mme. Castor attend ses chamalows...");
+        }
+      } else if (npcName === "Panneau") {
+        this.questManager.acceptQuest("pont");
+      }
     }
 
     document.getElementById("dialogue-screen").style.display = "none";
