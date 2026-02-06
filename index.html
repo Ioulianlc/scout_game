@@ -71,6 +71,30 @@
         <span id="main-quest-text">Chargement...</span>
     </div>
 
+    <div id="badge-popup" style="
+        display: none; 
+        position: fixed; 
+        top: 30%; 
+        left: 50%; 
+        transform: translate(-50%, -50%); 
+        background: rgba(0, 0, 0, 0.85); 
+        border: 4px solid #ffd700; 
+        border-radius: 15px; 
+        padding: 20px; 
+        flex-direction: column; 
+        align-items: center; 
+        text-align: center; 
+        color: #ffd700; 
+        font-family: 'Courier New', monospace; 
+        z-index: 4000; 
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+        min-width: 300px;
+    ">
+        <h2 style="margin: 0 0 10px 0; font-size: 20px; text-transform: uppercase;">Badge Débloqué !</h2>
+        <img id="badge-popup-img" src="" style="width: 80px; height: 80px; margin: 10px 0; border-radius: 50%; border: 2px solid white;">
+        <p id="badge-popup-text" style="color: white; font-size: 16px; margin: 0;"></p>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

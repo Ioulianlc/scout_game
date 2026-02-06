@@ -53,8 +53,7 @@ export class QuestManager {
 
         if (badgeId) {
             this.game.book.unlockBadge(badgeId);
-            alert(`BADGE DÉBLOQUÉ : ${name}`);
-        } else {
+        }else {
             console.warn("Badge ID inconnu pour :", name);
         }
     }

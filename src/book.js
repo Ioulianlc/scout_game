@@ -9,7 +9,7 @@ export class Book {
       { id: "renard", name: "Badge Renard", desc: "Esprit rusé.", img:"./badgerenard.png", unlocked: false },
       { id: "castor", name: "Badge Castor", desc: "Bâtisseur né.", img:"./badgecastor.png",unlocked: false },
       { id: "taupe", name: "Badge Taupe", desc: "Explorateur souterrain.", img:"./badgetaupe.png",unlocked: false },
-      { id: "arbre", name: "Badge Arbre", desc: "Gardien de la forêt.", img:"./badgearbre.png",unlocked: false },
+      { id: "arbre", name: "Badge Lapin", desc: "Gardien de la forêt.", img:"./badgelapin.png",unlocked: false },
       { id: "maitre", name: "Badge Ultime", desc: "Grand Maître Scout !", img:"./badgefeu.png",unlocked: false },
     ];
     this.inventory = [null, null, null, null];
@@ -280,14 +280,42 @@ export class Book {
     }
   }
 
+  // DANS src/book.js
+
   unlockBadge(badgeId) {
     const badge = this.badges.find(b => b.id === badgeId);
-    if (badge) {
+    
+    // On ne lance l'animation que si le badge n'était pas déjà débloqué
+    if (badge && !badge.unlocked) {
       badge.unlocked = true;
+      
+      // 1. Mise à jour visuelle dans le livre (point doré)
       const bDiv = document.getElementById(`badge-${badge.id}`);
       if (bDiv) {
           bDiv.style.opacity = "1";
-          bDiv.style.backgroundColor = "gold"; // Visuel "débloqué"
+          bDiv.style.backgroundColor = "gold"; 
+      }
+
+      // 2. AFFICHER LA POPUP (Nouvelle partie)
+      const popup = document.getElementById("badge-popup");
+      const img = document.getElementById("badge-popup-img");
+      const txt = document.getElementById("badge-popup-text");
+
+      if (popup && img && txt) {
+          // Remplir les infos
+          img.src = badge.img; // L'image du badge
+          txt.innerText = `Vous avez reçu : "${badge.name}"`;
+
+          // Afficher
+          popup.style.display = "flex";
+
+          // Jouer un son si possible
+          if (this.game.audioManager) this.game.audioManager.play('book_open'); // Ou un son de victoire
+
+          // Masquer automatiquement après 4 secondes
+          setTimeout(() => {
+              popup.style.display = "none";
+          }, 4000);
       }
     }
   }

@@ -21,7 +21,7 @@ export class World {
         this.collectibles = [];
         
         this.currentMapMesh = null;
-        this.debugMode = true;
+        this.debugMode = false;
 
         // On lance la première carte
         this.loadMap("exterieur");
@@ -200,15 +200,28 @@ export class World {
     }
 
     unlockCave() {
+        console.log("🗝️ Tentative d'ouverture de la grotte...");
+        
         if (this.caveBlocker) {
-            if (this.caveBlocker.helper) this.scene.remove(this.caveBlocker.helper);
+            console.log("✅ Mur trouvé ! Suppression en cours...");
             
+            // 1. Suppression visuelle (Boîte rouge)
+            if (this.caveBlocker.helper) {
+                this.scene.remove(this.caveBlocker.helper);
+            }
+            
+            // 2. Suppression physique (Collision)
             const index = this.colliders.indexOf(this.caveBlocker.box);
             if (index > -1) {
                 this.colliders.splice(index, 1);
+                console.log("✅ Collision supprimée !");
+            } else {
+                console.warn("⚠️ Bizarre : La collision n'était pas dans la liste.");
             }
+
             this.caveBlocker = null;
-            console.log("🔓 Grotte ouverte !");
+        } else {
+            console.error("❌ ERREUR : Le jeu ne trouve pas 'this.caveBlocker'. Vérifie la ligne de création dans loadMap !");
         }
     }
 

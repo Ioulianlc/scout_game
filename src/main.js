@@ -86,7 +86,7 @@ class Game {
   }
 // -------------------------------------------------------------------------------------------------------------------------------------------------
   setupCamera() {
-    this.frustumSize = 100; 
+    this.frustumSize = 10; 
     this.camera = new THREE.OrthographicCamera(0, 0, 0, 0, 0.1, 100);
     this.camera.position.set(0, 0, 10);
     this.camera.lookAt(0, 0, 0);
@@ -380,11 +380,8 @@ class Game {
       if (npcName === "Lapin") {
           if (step === 0) {
               // Début de la quête
-              this.questManager.addQuestToBook("lapin_map", "Carte de la forêt", "Rejoins la tour (-59, -33) pour acquérir la carte.");
+              this.questManager.addQuestToBook("lapin_map", "Carte de la forêt", "Va vite à la tour chercher la carte !");
               this.questManager.advanceStory(); // Step 1
-              alert("Le Lapin : 'Va vite à la tour chercher la carte !'");
-          } else {
-              alert("Le Lapin : 'Dépêche-toi d'aller à la tour !'");
           }
       }
 
@@ -402,10 +399,8 @@ class Game {
                   this.questManager.completeQuestInBook("biche_baie");
                   this.questManager.awardBadge("Ami des Biches", "silver");
                   this.questManager.advanceStory(); // Step 4 (Trouve Ecureuil)
-                  alert("Biche : 'Merci ! C'était délicieux.'");
-              } else {
-                  alert("Biche : 'Je meurs de faim... Trouve une baie !'");
-              }
+                  
+              } 
           }
       }
 
@@ -429,9 +424,7 @@ class Game {
                    this.world.unlockCave(); 
                    
                    this.questManager.advanceStory(); // Step 6 (Trouve Renard)
-                   alert("Ecureuil : 'Tiens, prends cette torche et file à la grotte !'");
-               } else {
-                   alert("Ecureuil : 'Pas de gland, pas de torche !'");
+                   
                }
           }
       }
