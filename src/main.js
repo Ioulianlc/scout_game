@@ -583,9 +583,8 @@ class Game {
                     this.questManager.awardBadge("Ami des Biches", "silver");
                     this.questManager.advanceStory(); 
                     if(this.questManager.storyStep === 3) this.questManager.advanceStory(); 
-                    alert("Biche : 'Merci ! C'était délicieux.'");
+                    
                 } else {
-                    alert("Biche : 'Je ne vois pas de baies...'");
                     this.questManager.storyStep = 3; 
                     this.questManager.updateMainQuestUI();
                 }
@@ -612,12 +611,37 @@ class Game {
                 
             }
         }
+        // DANS handleChoice (src/main.js)
+
+        // ... les autres animaux avant ...
+
         else if (npcName === "Castor") {
              const hasLog = this.book.inventory.find(i => i && i.name === "Bûche");
+             
              if (hasLog) {
+                 // 1. On retire la bûche
                  this.book.removeItem("Bûche");
+                 
+                 // 2. On donne le badge
                  this.questManager.awardBadge("Bâtisseur", "brown");
                  this.questManager.advanceStory();
+                 
+                 console.log("✅ Bûche donnée au Castor !");
+                 
+                 // 4. LANCEMENT DE LA FIN (Avec un petit délai pour être sûr)
+                 console.log("🎬 Lancement de la séquence de fin dans 0.5s...");
+                 
+                 // On utilise une flèche => pour garder le "this" correct
+                 setTimeout(() => {
+                     if (this.startEndingSequence) {
+                        this.startEndingSequence();
+                     } else {
+                        console.error("❌ ERREUR : La méthode startEndingSequence n'existe pas !");
+                     }
+                 }, 1000);
+
+             } else {
+                 if (step === 7) this.questManager.advanceStory();
              }
         }
     }
