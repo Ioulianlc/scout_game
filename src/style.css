@@ -50,3 +50,279 @@ html, body {
    
    Si tu as le code CSS pour ces éléments, envoie-le moi pour que je complète ce fichier !
 */
+
+/* --- INTEGRATION DES MENUS ET DU HUD --- */
+
+/* --- MENU PRINCIPAL --- */
+#main-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #f5e6c4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    font-family: "Courier New", Courier, monospace; /* Police style "Machine à écrire" / Pixel */
+}
+
+.menu-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+}
+
+.character-preview {
+    width: 300px;
+        
+}
+
+.btn-newgame {
+    background: #f5e6c4;
+    border: 2px solid #2c3e50;
+    padding: 10px 40px;
+    font-size: 24px;
+    color: #2c3e50;
+    cursor: pointer;
+    box-shadow: 2px 2px 0px #2c3e50;
+    transition: background-color 0.3s ease;
+}
+
+.btn-newgame:hover {
+    color: #547756;
+    border: 2px solid #547756;
+    box-shadow: 2px 2px 0px #547756;
+    transition: all 0.6s;
+}
+
+/* --- BOUTONS CARRÉS (Paramètres / Inventaire) --- */
+.btn-params {
+    width: 50px;
+    height: 50px;
+    background: #fcefcd;
+    border: 2px solid #2c3e50;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.settings-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    text-align: center;
+}
+
+.echap {
+    display: block;
+    font-size: 12px;
+    margin-top: 5px;
+    color: white;
+    background: #2c3e50;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: sans-serif;
+}
+
+/* --- BADGE DE PROFIL (En bas à gauche) --- */
+.profile-badge {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: #d9c5a3;
+    border: 2px solid #8b7355;
+    display: flex;
+    align-items: center;
+    padding: 5px 15px;
+    border-radius: 50px 0px 0px 50px;
+    z-index: 10;
+}
+
+.profile-icon {
+    width: 30px;
+    height: 30px;
+    background: #218623;
+    border-radius: 50%;
+    margin-right: 10px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.profile-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    image-rendering: pixelated;
+}
+
+.profile-name {
+    font-family: "Courier New", Courier, monospace;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#main-menu,
+#settings-menu {
+    position: fixed; /* Indispensable pour être au-dessus du canvas */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+}
+
+/* --- MENU PARAMÈTRES --- */
+#settings-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #f5e6c4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 110;
+}
+
+.settings-title {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-family: "Courier New", Courier, monospace;
+}
+
+.title-gear {
+    width: 40px;
+    height: 40px;
+    image-rendering: pixelated;
+}
+
+.settings-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 300px;
+}
+
+/* --- POPUP / TUTORIAL OVERLAY --- */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Fond sombre transparent */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200; /* Au-dessus des paramètres */
+}
+
+.popup-content {
+    max-width: 90%;
+    max-height: 90%;
+    position: relative;
+}
+
+.guide-img {
+    width: 100%;
+    height: auto;
+    border: 4px solid #8b7355;
+    border-radius: 10px;
+}
+
+/* --- LOGIQUE DU HUD (Jeu) --- */
+#game-hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+}
+
+.hud-bottom-left {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    align-items: flex-end; /* Aligne les boutons sur le bas du badge */
+    gap: 15px;
+    pointer-events: none;
+}
+
+/* IMPORTANT : On annule l'absolute pour la carte quand elle est DANS le HUD */
+.hud-bottom-left .profile-badge {
+    position: relative;
+    bottom: 0;
+    left: 0;
+    pointer-events: auto;
+}
+
+.hud-actions {
+    display: flex;
+    gap: 10px;
+    pointer-events: auto;
+}
+
+.hud-btn-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* DA spécifique des boutons HUD */
+#game-hud .btn-params {
+    width: 50px;
+    height: 50px;
+    background: #d9c5a3;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.1s;
+}
+
+#game-hud .btn-params:hover {
+    background-color: #2c3e50;
+    box-shadow: 1px 1px 0px brown;
+}
+
+#game-hud .btn-params:hover img {
+    filter: invert(1);
+}
+
+#game-hud .btn-params img {
+    width: 30px;
+    height: 30px;
+    image-rendering: pixelated;
+}
+
+.key-hint {
+    display: block;
+    font-size: 11px;
+    margin-top: 5px;
+    color: white;
+    background: #2c3e50;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: "Courier New", Courier, monospace;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-top: -25px; /* Chevauchement léger pour le style */
+    z-index: 2;
+}

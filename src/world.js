@@ -145,7 +145,7 @@ export class World {
         // CAS 1 : EXTÉRIEUR
         if (mapId === "exterieur") {
             this.addNPC(
-                'Lapin', -27, 28, './lapindebout.png', 
+                'Lapin', -27, 28, './lapindebout.png',
                 ['./lapindialogue.png', 'Je vois que tu es perdu !', 'Va voir la tour de guet pour la carte.']
             );
             this.addNPC(
@@ -158,19 +158,20 @@ export class World {
             );
             this.addNPC(
                 'Castor', 52, -12, './castordebout.png',
-                ['./castorspeek.png', 'Aide-moi à réparer mon pont !']
+                ['./castorspeek.png', 'Aide-moi à réparer mon pont pour sauver la forêt ! ']
             );
         }
-
+ 
         // CAS 2 : GROTTE
         if (mapId === "grotte") {
             // Le Renard est UNIQUEMENT ici
             this.addNPC(
                 'Renard', -26, 29, './renarddebout.png',
-                ['./renarddialogue.png', 'Miam un humain !', 'Donne-moi ta carte et je te donnerai une boussole.']
+                ['./renarddialogue.png', 'Miam un humain !', 'Miam un humain !', 'Donne-moi ta carte et je t\' aiderai.']
             );
         }
     }
+ 
 
     clearLevel() {
         if (this.currentMapMesh) {

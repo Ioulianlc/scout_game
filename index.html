@@ -1,39 +1,120 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>projet-scout</title>
     <link rel="stylesheet" href="/src/style.css">
-  </head>
-  <body>
+</head>
+
+<body>
+    <div id="main-menu">
+        <div class="settings-container">
+            <button id="btn-settings" class="btn-params">
+                <img src="./settings.png" alt="Settings" id="img-gear">
+            </button>
+            <span class="echap">echap</span>
+        </div>
+
+        <div class="menu-center">
+            <img src="./logo.svg" alt="Character Preview" class="character-preview">
+            <button id="btn-new-game" class="btn-newgame">Nouvelle Partie</button>
+        </div>
+
+        <div class="profile-badge">
+            <div class="profile-icon">
+                <img src="./profil.png" alt="User">
+            </div>
+            <span class="profile-name">Titouan</span>
+        </div>
+    </div>
+
+    <div id="settings-menu" class="hidden">
+        <div class="settings-container">
+            <button id="btn-back" class="btn-params">
+                <img src="./settings.png" alt="Back" id="img-back">
+            </button>
+            <span class="echap">echap</span>
+        </div>
+
+        <div class="menu-center">
+            <div class="settings-title">
+                <img src="./settings.png" alt="Icon" class="title-gear">
+                <h1>PARAMÈTRES</h1>
+            </div>
+            <div class="settings-buttons">
+                <button class="btn-newgame" id="btn-tutorial">Voir le didacticiel</button>
+                <button class="btn-newgame" id="btn-quit-game">Quitter le jeu</button>
+                <button class="btn-newgame" id="btn-quit-match">Quitter la partie</button>
+            </div>
+        </div>
+
+        <div class="profile-badge">
+            <div class="profile-icon">
+                <img src="./profil.png" alt="User">
+            </div>
+            <span class="profile-name">Titouan</span>
+        </div>
+    </div>
+
+    <div id="game-hud" class="hidden">
+        <div class="hud-bottom-left">
+            <div class="profile-badge">
+                <div class="profile-icon">
+                    <img src="./profil.png" alt="Titouan">
+                </div>
+                <span class="profile-name">Titouan</span>
+            </div>
+
+            <div class="hud-actions">
+                <div class="hud-btn-wrapper">
+                    <button id="btn-hud-inventory" class="btn-params">
+                        <img src="./sac.png" alt="Inventaire">
+                    </button>
+                    <span class="key-hint">i</span>
+                </div>
+
+                <div class="hud-btn-wrapper">
+                    <button id="btn-hud-settings" class="btn-params">
+                        <img src="./settings.png" alt="Paramètres">
+                    </button>
+                    <span class="key-hint">esc</span>
+                </div>
+            </div>
+        </div>
+    </div>
     <canvas class="webgl"></canvas>
-    
+
     <div id="dialogue-box"></div>
 
     <div id="dynamic-compass" style="
-        display: none; /* Le JS le passera en block quand on aura l'objet */
+        display: none;
         position: fixed; 
         top: 20px; 
         right: 20px; 
         width: 60px; 
         height: 60px; 
-        background: url('./src/assets/boussole.png') no-repeat center center; 
+        background: url('./boussole.png') no-repeat center center; 
         background-size: contain;
-        z-index: 1500;
+        z-index: 10;
     "></div>
 
-    <div id="interaction-prompt" style="display:none; position:fixed; bottom:20%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); padding:10px; color:white; border-radius:5px;"></div>
+    <div id="interaction-prompt"
+        style="display:none; position:fixed; bottom:20%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); padding:10px; color:white; border-radius:5px;">
+    </div>
 
-    <div id="dialogue-screen" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); flex-direction:column; align-items:center; justify-content:center; z-index:1000;">
+    <div id="dialogue-screen"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); flex-direction:column; align-items:center; justify-content:center; z-index:1000;">
         <img id="npc-portrait" style="width:200px; height:200px; image-rendering:pixelated;" src="" alt="NPC Portrait">
-        <div style="background:#222; color:white; padding:20px; border:2px solid white; width:400px; text-align:center;">
+        <div
+            style="background:#222; color:white; padding:20px; border:2px solid white; width:400px; text-align:center;">
             <p id="dialogue-text"></p>
             <div id="dialogue-options"></div>
         </div>
     </div>
-
+    
     <div id="debug-coords" style="
         position: fixed;
         top: 10px;
@@ -51,24 +132,28 @@
         POS: 0, 0
     </div>
 
-    
-    </div>
     <div id="main-quest-ui" style="
-            position: absolute;
-            top: 70px; /* <--- MODIFIÉ ICI (au lieu de 20px) pour éviter le debug */
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 16px;
-            border: 2px solid #ffd700;
-            max-width: 250px;
-            pointer-events: none;
-        ">
+        position: absolute;
+        top: 70px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 16px;
+        border: 2px solid #ffd700;
+        max-width: 250px;
+        pointer-events: none;
+    ">
         <strong style="color: #ffd700;">QUÊTE PRINCIPALE</strong><br>
         <span id="main-quest-text">Chargement...</span>
+    </div>
+
+    <div id="tutorial-overlay" class="overlay hidden">
+        <div id="tutorial-popup" class="popup-content">
+            <img src="./guide.png" alt="Guide du scout" class="guide-img">
+        </div>
     </div>
 
     <div id="badge-popup" style="
@@ -96,5 +181,6 @@
     </div>
 
     <script type="module" src="/src/main.js"></script>
-  </body>
+</body>
+
 </html>
