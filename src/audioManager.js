@@ -21,7 +21,7 @@ export class AudioManager {
   }
 
   // --- NOUVEAU : POUR LA MUSIQUE D'AMBIANCE ---
-  playMusic(name, volume = 0.3) {
+  playMusic(name, volume = 0.5) {
     const music = this.sounds[name];
 
     // 1. Si c'est déjà cette musique qui joue, on ne fait rien (on évite le reboot)

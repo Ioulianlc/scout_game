@@ -9,10 +9,40 @@ import { QuestManager } from "./questManager.js";
 
 class Game {
   constructor() {
+    // --- DONNÉES DE L'HISTOIRE ---
+    this.storyIndex = 0;
+    this.storyData = [
+        {
+            img: "./story1.png", // Assure-toi d'avoir cette image
+            text: "Après une longue marche, nous avons enfin trouvé l'endroit idéal pour camper. Tout le monde s'est entraidé pour monter les tentes avant la tombée de la nuit !"
+        },
+        {
+            img: "./story2.png", // Assure-toi d'avoir cette image
+            text: "Le soir venu, les histoires et les rires ont rempli la forêt. Autour du feu de camp, les chamallows grillaient... c'était la soirée parfaite. Enfin, c'est ce que je croyais."
+        },
+        {
+            img: "./story3.png", // Assure-toi d'avoir cette image
+            text: "Pendant mon sommeil, une voix ancienne m'a appelé... L'Arbre Sacré ! Il m'a murmuré : 'Aide-moi, petit humain. La forêt est en danger, le feu approche ! Je te donne le don de comprendre les animaux... Trouve-les, et sauvez notre maison !'"
+        }   
+    ];
+    
+    this.endingData = [
+        {
+            img: "./ending1.png", 
+            text: "Grâce à toi, la forêt a été sauvée ! Le feu a été éteint et la nature peut enfin respirer. L'Arbre Sacré te remercie, et tous les animaux ont retrouvé la paix."
+        },
+        {
+            img: "./ending2.png", 
+            text: "Mais comment tout cela a-t-il commencé ? En explorant, tu as trouvé ça : un tout petit mégot de cigarette, jeté sans faire attention. Ce petit déchet, à l'origine du grand danger. La forêt a failli disparaître à cause d'une simple cigarette mal éteinte."
+        }
+    ];
+    this.isEnding = false; // Pour savoir si on est dans l'intro ou la fin
+
     // --- 1. RÉCUPÉRATION DES ÉLÉMENTS HTML ---
     const startButton = document.getElementById("btn-new-game");
     const menuElement = document.getElementById("main-menu");
     this.mainMenu = menuElement;
+    this.storyScreen = document.getElementById("story-screen"); // Nouvel écran
     this.settingsMenu = document.getElementById("settings-menu");
     this.gameHud = document.getElementById("game-hud");
     this.tutorialOverlay = document.getElementById("tutorial-overlay");
@@ -21,14 +51,17 @@ class Game {
     // --- 2. GESTION DU LANCEMENT (START) ---
     if (startButton) {
       startButton.addEventListener("click", () => {
-        menuElement.classList.add("hidden");
-        // On affiche tout le HUD d'un coup
-        if (this.gameHud) this.gameHud.classList.remove("hidden");
-        this.isPaused = false;
-        if (this.audioManager) {
-          this.audioManager.playMusic("forest_theme", 0.3);
-        }
+        // Au lieu de lancer le jeu direct, on lance l'histoire
+        this.startStorySequence();
       });
+    }
+
+    // Bouton SUIVANT de l'histoire
+    const nextStoryBtn = document.getElementById("btn-next-story");
+    if (nextStoryBtn) {
+        nextStoryBtn.addEventListener("click", () => {
+            this.nextStorySlide();
+        });
     }
 
     // --- 3. GESTION DES MENUS ---
@@ -45,15 +78,15 @@ class Game {
     if (btnBack) {
       btnBack.addEventListener("click", () => {
         this.settingsMenu.classList.add("hidden");
-        // Si on revient des paramètres et qu'on n'a pas encore lancé la partie, on montre le menu
-        // Si on est en partie, on ne fait rien (le HUD reste affiché)
         if (
           this.isPaused &&
           this.mainMenu.classList.contains("hidden") &&
-          this.gameHud.classList.contains("hidden")
+          this.gameHud.classList.contains("hidden") &&
+          this.storyScreen.classList.contains("hidden") // Vérif histoire
         ) {
           this.mainMenu.classList.remove("hidden");
         } else {
+          // Si on est en jeu ou histoire
           this.isPaused = false;
         }
       });
@@ -65,10 +98,13 @@ class Game {
       if (btn) {
         btn.addEventListener("click", () => {
           this.settingsMenu.classList.add("hidden");
-          // On cache le HUD quand on quitte pour revenir au menu propre
           if (this.gameHud) this.gameHud.classList.add("hidden");
+          if (this.storyScreen) this.storyScreen.classList.add("hidden"); // Cacher histoire si on quitte
           this.mainMenu.classList.remove("hidden");
           this.isPaused = true;
+          
+          // Reset musique si besoin
+           if (this.audioManager) this.audioManager.stopMusic();
         });
       }
     });
@@ -123,23 +159,17 @@ class Game {
     this.inputs = new Inputs();
 
     this.audioManager = new AudioManager();
-    this.audioManager.load("forest_theme", "./sounds/forest_theme.mp3");
+    this.audioManager.load("forest_theme", "./forest_theme.mp3");
+    this.audioManager.load("step", "./step.mp3");
 
-    window.addEventListener(
-      "keydown",
-      () => {
-        if (this.audioManager) this.audioManager.playMusic("forest_theme", 0.3);
-      },
-      { once: true },
-    );
+    // Suppression de l'auto-play au keydown global pour éviter les conflits
+    // La musique se lancera via l'histoire ou le jeu
 
     this.scout = new Scout(this.scene);
     this.world = new World(this.scene, this.camera, this.scout);
 
     this.book = new Book(this);
     this.questManager = new QuestManager(this);
-    // Note: On ne donne plus la carte au début, on doit la trouver !
-    // this.book.addItem("Carte", "La carte de la forêt.", null);
 
     this.lightSystem = new LightSystem(this.scene);
     this.mazeZone = { minX: -95, maxX: -52, minY: -1, maxY: 30 };
@@ -159,6 +189,14 @@ class Game {
           return;
         }
         if (this.currentNPC) return;
+        
+        // Gestion de l'echap pendant l'histoire (optionnel)
+        if (!this.storyScreen.classList.contains("hidden")) {
+            // On peut choisir de quitter l'histoire ou ouvrir le menu
+            this.settingsMenu.classList.remove("hidden");
+            return;
+        }
+
         if (!this.settingsMenu.classList.contains("hidden")) {
           this.settingsMenu.classList.add("hidden");
           this.isPaused = false;
@@ -181,6 +219,10 @@ class Game {
 
       if (e.key.toLowerCase() === "i") {
         if (this.currentNPC) return;
+        // On empêche d'ouvrir le livre pendant l'histoire ou le menu
+        if (!this.mainMenu.classList.contains("hidden")) return;
+        if (!this.storyScreen.classList.contains("hidden")) return;
+
         this.book.toggle();
         this.isPaused = this.book.isOpen;
         if (this.audioManager) this.audioManager.play("book_open");
@@ -192,7 +234,111 @@ class Game {
     this.loop();
   }
 
-  // --- MÉTHODES DE LA CLASSE ---
+  // --- NOUVELLES MÉTHODES POUR L'HISTOIRE ---
+
+  startStorySequence() {
+      // 1. Cacher le menu
+      this.mainMenu.classList.add("hidden");
+      
+      // 2. Afficher l'écran d'histoire
+      this.storyScreen.classList.remove("hidden");
+      this.storyScreen.style.display = "flex"; // Force flex pour le centrage
+
+      // 3. Reset index et affichage
+      this.storyIndex = 0;
+      this.updateStoryDisplay();
+
+      // 4. Lancer une musique calme (si tu as, sinon garde forest_theme)
+      if (this.audioManager) this.audioManager.playMusic("forest_theme", 0.2);
+      
+  }
+
+  updateStoryDisplay() {
+      // CHOIX DES DONNÉES : Intro ou Fin ?
+      const currentData = this.isEnding ? this.endingData : this.storyData;
+      const data = currentData[this.storyIndex];
+      
+      const imgEl = document.getElementById("story-image");
+      const textEl = document.getElementById("story-text-container");
+      
+      if(imgEl) imgEl.src = data.img;
+      if(textEl) textEl.innerText = data.text;
+
+      const btn = document.getElementById("btn-next-story");
+      if(btn) {
+          // Si c'est la DERNIÈRE image
+          if (this.storyIndex === currentData.length - 1) {
+              
+              if (this.isEnding) {
+                  btn.innerText = "RETOURNER AU MENU"; // Texte de fin
+              } else {
+                  btn.innerText = "COMMENCER L'AVENTURE !"; // Texte d'intro
+              }
+              
+              // On garde ton style vert classe
+              btn.classList.add("btn-start-adventure");
+          } 
+          else {
+              btn.innerText = "Suivant >>";
+              btn.classList.remove("btn-start-adventure");
+          }
+      }
+  }
+
+  nextStorySlide() {
+      // CHOIX DES DONNÉES
+      const currentData = this.isEnding ? this.endingData : this.storyData;
+
+      if (this.storyIndex < currentData.length - 1) {
+          this.storyIndex++;
+          this.updateStoryDisplay();
+      } else {
+          // C'EST LA DERNIÈRE DIA
+          if (this.isEnding) {
+              // FIN DU JEU -> On recharge la page pour revenir au menu propre
+              location.reload(); 
+          } else {
+              // FIN DE L'INTRO -> On lance le jeu
+              this.launchGame();
+          }
+      }
+  }
+
+  launchGame() {
+      // 1. Cacher l'histoire
+      this.storyScreen.classList.add("hidden");
+      this.storyScreen.style.display = "none"; // Important pour ne pas bloquer les clics
+
+      // 2. Afficher le HUD
+      if (this.gameHud) this.gameHud.classList.remove("hidden");
+      
+      // 3. Démarrer la logique
+      this.isPaused = false;
+      
+      // 4. Monter le volume musique
+      if (this.audioManager) this.audioManager.playMusic("forest_theme", 0.8);
+  }
+  startEndingSequence() {
+      console.log("🎬 Lancement de la séquence de fin");
+      this.isEnding = true; // On passe en mode "Fin"
+      
+      // 1. On cache l'interface de jeu et le dialogue
+      if (this.gameHud) this.gameHud.classList.add("hidden");
+      document.getElementById("dialogue-screen").style.display = "none";
+
+      // 2. On affiche l'écran d'histoire
+      this.storyScreen.classList.remove("hidden");
+      this.storyScreen.style.display = "flex";
+
+      // 3. On reset l'index et on met à jour
+      this.storyIndex = 0;
+      this.updateStoryDisplay();
+
+      // 4. Musique de victoire/émotion (optionnel)
+      if (this.audioManager) this.audioManager.playMusic("forest_theme", 0.5); 
+  }
+
+  // ------------------------------------------
 
   setupCamera() {
     this.frustumSize = 10;
@@ -220,12 +366,12 @@ class Game {
   }
 
   update(deltaTime) {
+    // Si on est dans le menu OU l'histoire, on ne met pas à jour le jeu
+    if (!this.storyScreen.classList.contains("hidden")) return;
+
     this.checkProximity();
     this.checkCollectibles();
-    
-    // Ajout : Vérification de la quête de la Carte (au sol)
     this.checkSpecialInteractions();
-
     this.checkTeleporters();
 
     if (this.book) {
@@ -236,44 +382,46 @@ class Game {
     }
 
     if (!this.isPaused) {
-      this.scout.update(
-        deltaTime,
-        this.inputs,
-        this.world.colliders,
-        this.audioManager,
-      );
+      if (this.scout) {
+          this.scout.update(
+            deltaTime,
+            this.inputs,
+            this.world.colliders,
+            this.audioManager,
+          );
 
-      let targetX =
-        this.camera.position.x +
-        (this.scout.mesh.position.x - this.camera.position.x) * 5 * deltaTime;
-      let targetY =
-        this.camera.position.y +
-        (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
+          let targetX =
+            this.camera.position.x +
+            (this.scout.mesh.position.x - this.camera.position.x) * 5 * deltaTime;
+          let targetY =
+            this.camera.position.y +
+            (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
 
-      const aspect = window.innerWidth / window.innerHeight;
-      const camHalfWidth = (this.frustumSize * aspect) / 2;
-      const camHalfHeight = this.frustumSize / 2;
+          const aspect = window.innerWidth / window.innerHeight;
+          const camHalfWidth = (this.frustumSize * aspect) / 2;
+          const camHalfHeight = this.frustumSize / 2;
 
-      this.camera.position.x = THREE.MathUtils.clamp(
-        targetX,
-        -96 + camHalfWidth,
-        96 - camHalfWidth,
-      );
-      this.camera.position.y = THREE.MathUtils.clamp(
-        targetY,
-        -56 + camHalfHeight,
-        56 - camHalfHeight,
-      );
+          this.camera.position.x = THREE.MathUtils.clamp(
+            targetX,
+            -96 + camHalfWidth,
+            96 - camHalfWidth,
+          );
+          this.camera.position.y = THREE.MathUtils.clamp(
+            targetY,
+            -56 + camHalfHeight,
+            56 - camHalfHeight,
+          );
 
-      if (this.world.currentMapId === "grotte") {
-        this.lightSystem.enable();
-        this.lightSystem.update(this.scout.mesh.position);
-      } else {
-        this.lightSystem.disable();
-      }
+          if (this.world.currentMapId === "grotte") {
+            this.lightSystem.enable();
+            this.lightSystem.update(this.scout.mesh.position);
+          } else {
+            this.lightSystem.disable();
+          }
 
-      if (this.coordDisplay) {
-        this.coordDisplay.innerText = `X: ${this.scout.mesh.position.x.toFixed(1)} | Y: ${this.scout.mesh.position.y.toFixed(1)}`;
+          if (this.coordDisplay) {
+            this.coordDisplay.innerText = `X: ${this.scout.mesh.position.x.toFixed(1)} | Y: ${this.scout.mesh.position.y.toFixed(1)}`;
+          }
       }
     }
 
@@ -309,9 +457,7 @@ class Game {
     }
   }
 
-  // --- GESTION DES OBJETS SPÉCIAUX (CARTE AU SOL) ---
   checkSpecialInteractions() {
-    // Si on est à l'étape 1 (On cherche la carte)
     if (this.questManager.storyStep === 1) {
         const targetPos = new THREE.Vector3(-62, -32, 0);
         const dist = this.scout.mesh.position.distanceTo(targetPos);
@@ -324,7 +470,6 @@ class Game {
             if (this.inputs.keys.interact) {
                 if (this.audioManager) this.audioManager.play('book_open');
                 
-                // Suppression visuelle
                 const mapObject = this.scene.getObjectByName("QuestMapObject");
                 if (mapObject) {
                     this.scene.remove(mapObject);
@@ -342,6 +487,21 @@ class Game {
         }
     }
     return false;
+  }
+
+  checkTeleporters() {
+    if (!this.world.teleporters) return;
+    for (const tp of this.world.teleporters) {
+        const dist = this.scout.mesh.position.distanceTo(new THREE.Vector3(tp.x, tp.y, 0));
+        if (dist < 1.5) {
+            console.log("🌀 Téléportation vers :", tp.targetMap);
+            this.world.loadMap(tp.targetMap);
+            this.scout.mesh.position.set(tp.targetX, tp.targetY, 0);
+            this.camera.position.x = tp.targetX;
+            this.camera.position.y = tp.targetY;
+            break; 
+        }
+    }
   }
 
   checkCollectibles() {
@@ -369,34 +529,6 @@ class Game {
         this.world.collectibles.splice(indexFound, 1);
         this.inputs.keys.interact = false;
       }
-    }
-  }
-
-  // --- GESTION DES TÉLÉPORTEURS (Changement de carte) ---
-  checkTeleporters() {
-    if (!this.world.teleporters) return;
-
-    for (const tp of this.world.teleporters) {
-        // On calcule la distance entre le joueur et le téléporteur
-        const dist = this.scout.mesh.position.distanceTo(new THREE.Vector3(tp.x, tp.y, 0));
-        
-        // Si on est assez proche (moins de 1.5 unité)
-        if (dist < 1.5) {
-            console.log("🌀 Téléportation vers :", tp.targetMap);
-            
-            // 1. On charge la nouvelle carte
-            this.world.loadMap(tp.targetMap);
-            
-            // 2. On déplace le joueur à la destination prévue
-            this.scout.mesh.position.set(tp.targetX, tp.targetY, 0);
-            
-            // 3. On centre la caméra immédiatement pour éviter un "saut" visuel
-            this.camera.position.x = tp.targetX;
-            this.camera.position.y = tp.targetY;
-            
-            // On arrête la boucle pour ne pas se téléporter deux fois
-            break; 
-        }
     }
   }
 
@@ -431,114 +563,65 @@ class Game {
     this.updateDialogueText();
   }
 
-  // --- LOGIQUE DES CHOIX (QUÊTES) ---
   handleChoice(choice) {
-    if (choice === "accept") {
-      const npcName = this.currentNPC.name;
-      const step = this.questManager.storyStep; // Raccourci
- 
-      // --- 1. LAPIN ---
-      if (npcName === "Lapin") {
-          if (step === 0) {
-              // Début de la quête
-              this.questManager.addQuestToBook("lapin_map", "Carte de la forêt", "Va vite à la tour chercher la carte !");
-              this.questManager.advanceStory(); // Step 1
-          }
-      }
- 
-      // --- 2. BICHE ---
-      else if (npcName === "biche") { // Attention à la majuscule dans ton code initNPCs
-          if (step === 2) {
-              this.questManager.addQuestToBook("biche_baie", "La biche gourmande", "Trouve une baie pour la biche.");
-              this.questManager.advanceStory(); // Step 3 (Cherche baie)
-          }
-          else if (step === 3) {
-              // Vérifier si on a la baie
-              const hasBerry = this.book.inventory.find(i => i.name === "Baie"); // Assure toi que l'item s'appelle "Baie"
-              if (hasBerry) {
-                  this.book.removeItem("Baie");
-                  this.questManager.completeQuestInBook("biche_baie");
-                  this.questManager.awardBadge("Ami des Biches", "silver");
-                  this.questManager.advanceStory(); // Step 4 (Trouve Ecureuil)
-                 
-              }
-          }
-      }
- 
-      // --- 3. ECUREUIL ---
-      else if (npcName === "Ecureuil") {
-          if (step === 4) {
-              this.questManager.addQuestToBook("ecureuil_gland", "Célian l'écureuil gourmand", "Trouve un gland.");
-              this.questManager.advanceStory(); // Step 5 (Cherche Gland)
-          }
-          else if (step === 5) {
-               const hasAcorn = this.book.inventory.find(i => i.name === "Gland");
-               if (hasAcorn) {
-                   this.book.removeItem("Gland");
-                   
-                   // Récompenses
-                   this.book.addItem("Torche", "Pour voir dans le noir", null);
-                   this.questManager.awardBadge("Éclaireur", "orange");
-                   this.questManager.completeQuestInBook("ecureuil_gland");
-                   
-                   // Débloquer la grotte !
-                   this.world.unlockCave();
-                   
-                   this.questManager.advanceStory(); // Step 6 (Trouve Renard)
-                   
-               }
-          }
-      }
- 
-      // --- 4. RENARD (Dans la grotte) ---
-     // --- 4. RENARD (Dans la grotte) ---
-      else if (npcName === "Renard") {
-          if (step === 6) {
-              // On vérifie si le joueur a la carte (note le '&&' pour être sûr que l'item n'est pas null)
-              const hasMap = this.book.inventory.find(i => i && i.name === "Carte");
-             
-              if (hasMap) {
-                  // 1. ON SUPPRIME LA CARTE
-                  // Cela va automatiquement cacher la mini-map du widget
-                  this.book.removeItem("Carte");
-                 
-                  // 2. ON AJOUTE LA BOUSSOLE
-                  // Cela va automatiquement afficher le png boussole dans le widget !
-                  // (Tu peux mettre null pour l'image d'inventaire si tu n'en as pas, ou mettre une icône)
-                  this.book.addItem("Boussole", "Indique le Nord.", null);
-                 
-                  // 3. Récompenses & Progression
-                  this.questManager.awardBadge("Rusé comme un Renard", "red");
-                  this.questManager.addQuestToBook("renard_done", "Renard trouvé", "Fait.");
-                  this.questManager.completeQuestInBook("renard_done");
-                 
-                  this.questManager.advanceStory(); // Step 7
-                 
-              }
-              
-          }
-      }
- 
-      // --- 5. CASTOR ---
-      else if (npcName === "Castor") {
-          if (step === 7) {
-               this.questManager.addQuestToBook("castor_pont", "Maître constructeur", "Construit un pont (trouve une bûche).");
-               this.questManager.advanceStory(); // Step 8 (Cherche Bûche)
-          }
-          else if (step === 8) {
-              const hasLog = this.book.inventory.find(i => i.name === "Bûche");
-              if (hasLog) {
-                  this.book.removeItem("Bûche"); // Il la donne
-                  this.questManager.completeQuestInBook("castor_pont");
-                  this.questManager.awardBadge("Bâtisseur", "brown");
-                 
-                  this.questManager.advanceStory(); // Step 9 (FIN)
-              }
-          }
-      }
+    if (choice === 'accept') {
+        const npcName = this.currentNPC.name;
+        const step = this.questManager.storyStep;
+
+        if (npcName === "Lapin") {
+            if (step === 0) {
+                this.questManager.addQuestToBook("lapin_map", "La Carte Perdue", "Trouve la carte à la Tour (-62, -32).");
+                this.questManager.advanceStory(); 
+                
+            } 
+        }
+        else if (npcName === "biche") {
+             if (step === 2 || step === 3) {
+                const hasBerry = this.book.inventory.find(i => i && i.name === "Baie");
+                if (hasBerry) {
+                    this.book.removeItem("Baie");
+                    this.questManager.awardBadge("Ami des Biches", "silver");
+                    this.questManager.advanceStory(); 
+                    if(this.questManager.storyStep === 3) this.questManager.advanceStory(); 
+                    alert("Biche : 'Merci ! C'était délicieux.'");
+                } else {
+                    alert("Biche : 'Je ne vois pas de baies...'");
+                    this.questManager.storyStep = 3; 
+                    this.questManager.updateMainQuestUI();
+                }
+             }
+        }
+        else if (npcName === "Ecureuil") {
+             const hasAcorn = this.book.inventory.find(i => i && i.name === "Gland");
+             if (hasAcorn) {
+                 this.book.removeItem("Gland");
+                 this.questManager.awardBadge("Éclaireur", "gold");
+                 this.world.unlockCave(); 
+                 this.questManager.advanceStory(); 
+             }  
+        }
+        else if (npcName === "Renard") {
+            const hasMap = this.book.inventory.find(i => i && i.name === "Carte");
+            if (hasMap) {
+                this.book.removeItem("Carte");
+                this.book.addItem("Boussole", "Indique le Nord.", null); 
+                this.questManager.awardBadge("Rusé comme un Renard", "red");
+                this.questManager.addQuestToBook("renard_done", "Renard trouvé", "Fait.");
+                this.questManager.completeQuestInBook("renard_done");
+                this.questManager.advanceStory(); 
+                
+            }
+        }
+        else if (npcName === "Castor") {
+             const hasLog = this.book.inventory.find(i => i && i.name === "Bûche");
+             if (hasLog) {
+                 this.book.removeItem("Bûche");
+                 this.questManager.awardBadge("Bâtisseur", "brown");
+                 this.questManager.advanceStory();
+             }
+        }
     }
-   
-    // Fermeture dialogue
+
     document.getElementById("dialogue-screen").style.display = "none";
     this.isPaused = false;
     this.currentNPC = null;
