@@ -9,38 +9,97 @@ import { QuestManager } from "./questManager.js";
 
 class Game {
   constructor() {
-    // Gestion du lancement du jeu
+    // --- 1. RÉCUPÉRATION DES ÉLÉMENTS HTML ---
     const startButton = document.getElementById("btn-new-game");
     const menuElement = document.getElementById("main-menu");
     this.mainMenu = menuElement;
     this.settingsMenu = document.getElementById("settings-menu");
+    this.gameHud = document.getElementById("game-hud");
+    this.tutorialOverlay = document.getElementById("tutorial-overlay");
+    this.coordDisplay = document.getElementById("debug-coords");
 
-    startButton.addEventListener("click", () => {
-      menuElement.classList.add("hidden");
-      this.isPaused = false;
-      if (this.audioManager) {
-        this.audioManager.playMusic("forest_theme", 0.3);
+    // --- 2. GESTION DU LANCEMENT (START) ---
+    if (startButton) {
+      startButton.addEventListener("click", () => {
+        menuElement.classList.add("hidden");
+        // On affiche tout le HUD d'un coup
+        if (this.gameHud) this.gameHud.classList.remove("hidden");
+        this.isPaused = false;
+        if (this.audioManager) {
+          this.audioManager.playMusic("forest_theme", 0.3);
+        }
+      });
+    }
+
+    // --- 3. GESTION DES MENUS ---
+    const btnSettings = document.getElementById("btn-settings");
+    if (btnSettings) {
+      btnSettings.addEventListener("click", () => {
+        this.mainMenu.classList.add("hidden");
+        this.settingsMenu.classList.remove("hidden");
+        this.isPaused = true;
+      });
+    }
+
+    const btnBack = document.getElementById("btn-back");
+    if (btnBack) {
+      btnBack.addEventListener("click", () => {
+        this.settingsMenu.classList.add("hidden");
+        // Si on revient des paramètres et qu'on n'a pas encore lancé la partie, on montre le menu
+        // Si on est en partie, on ne fait rien (le HUD reste affiché)
+        if (
+          this.isPaused &&
+          this.mainMenu.classList.contains("hidden") &&
+          this.gameHud.classList.contains("hidden")
+        ) {
+          this.mainMenu.classList.remove("hidden");
+        } else {
+          this.isPaused = false;
+        }
+      });
+    }
+
+    const quitActions = ["btn-quit-match", "btn-quit-game"];
+    quitActions.forEach((id) => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.addEventListener("click", () => {
+          this.settingsMenu.classList.add("hidden");
+          // On cache le HUD quand on quitte pour revenir au menu propre
+          if (this.gameHud) this.gameHud.classList.add("hidden");
+          this.mainMenu.classList.remove("hidden");
+          this.isPaused = true;
+        });
       }
     });
 
-    document.getElementById("btn-settings").addEventListener("click", () => {
-      this.mainMenu.classList.add("hidden");
-      this.settingsMenu.classList.remove("hidden");
-      this.isPaused = true;
-    });
+    // --- 4. ACTIONS DU HUD ---
+    const btnHudSettings = document.getElementById("btn-hud-settings");
+    if (btnHudSettings) {
+      btnHudSettings.addEventListener("click", () => {
+        this.settingsMenu.classList.remove("hidden");
+        this.isPaused = true;
+      });
+    }
 
-    // Récupération du didacticiel
-    this.tutorialOverlay = document.getElementById("tutorial-overlay");
+    const btnHudInventory = document.getElementById("btn-hud-inventory");
+    if (btnHudInventory) {
+      btnHudInventory.addEventListener("click", () => {
+        if (this.currentNPC) return;
+        this.book.toggle();
+        this.isPaused = this.book.isOpen;
+        if (this.audioManager) this.audioManager.play("book_open");
+      });
+    }
+
+    // --- 5. DIDACTICIEL ---
     const btnTutorial = document.getElementById("btn-tutorial");
-
-    // Ouvrir le didacticiel
     if (btnTutorial) {
       btnTutorial.addEventListener("click", () => {
         this.tutorialOverlay.classList.remove("hidden");
       });
     }
 
-    // Fermer au clic sur le fond noir
     if (this.tutorialOverlay) {
       this.tutorialOverlay.addEventListener("click", (e) => {
         if (e.target === this.tutorialOverlay) {
@@ -49,29 +108,7 @@ class Game {
       });
     }
 
-    document.getElementById("btn-back").addEventListener("click", () => {
-      this.settingsMenu.classList.add("hidden");
-      this.mainMenu.classList.remove("hidden");
-    });
-
-    // Quitter la partie (depuis le menu paramètres)
-    document.getElementById("btn-quit-match").addEventListener("click", () => {
-      this.settingsMenu.classList.add("hidden"); // Cache les paramètres
-      this.mainMenu.classList.remove("hidden"); // Affiche le menu principal
-      this.isPaused = true; // Garde le jeu en pause
-    });
-
-    // Quitter le jeu (souvent la même action sur navigateur)
-    document.getElementById("btn-quit-game").addEventListener("click", () => {
-      // Si tu veux simplement retourner au menu :
-      this.settingsMenu.classList.add("hidden");
-      this.mainMenu.classList.remove("hidden");
-      this.isPaused = true;
-
-      // Optionnel : Tu peux aussi recharger la page pour tout remettre à zéro
-      // window.location.reload();
-    });
-
+    // --- 6. INITIALISATION THREE.JS ---
     this.canvas = document.querySelector("canvas.webgl");
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
@@ -85,14 +122,13 @@ class Game {
     this.setupCamera();
     this.inputs = new Inputs();
 
-    // --- AUDIO ---
     this.audioManager = new AudioManager();
     this.audioManager.load("forest_theme", "./sounds/forest_theme.mp3");
 
     window.addEventListener(
       "keydown",
       () => {
-        this.audioManager.playMusic("forest_theme", 0.3);
+        if (this.audioManager) this.audioManager.playMusic("forest_theme", 0.3);
       },
       { once: true },
     );
@@ -100,33 +136,20 @@ class Game {
     this.scout = new Scout(this.scene);
     this.world = new World(this.scene, this.camera, this.scout);
 
-    // --- LIVRE & QUÊTES ---
     this.book = new Book(this);
     this.questManager = new QuestManager(this);
     this.book.addItem("Carte", "La carte de la forêt.", null);
 
-    // --- LUMIÈRE ---
     this.lightSystem = new LightSystem(this.scene);
+    this.mazeZone = { minX: -95, maxX: -52, minY: -1, maxY: 30 };
 
-    // --- ZONE LABYRINTHE ---
-    this.mazeZone = {
-      minX: -95,
-      maxX: -52,
-      minY: -1,
-      maxY: 30,
-    };
-
-    // --- ÉTAT INITIAL ---
-    this.isPaused = true; // On commence en pause pour le menu
+    this.isPaused = true;
     this.currentNPC = null;
     this.dialogueIndex = 0;
-    this.coordDisplay = document.getElementById("debug-coords");
 
-    // --- ÉCOUTEURS CLAVIER ---
+    // --- 7. ÉCOUTEURS CLAVIER ---
     window.addEventListener("keydown", (e) => {
-      // 1. Logique de la touche Echap
       if (e.key === "Escape") {
-        // PRIORITÉ : Si le didacticiel est ouvert, on ne ferme que lui
         if (
           this.tutorialOverlay &&
           !this.tutorialOverlay.classList.contains("hidden")
@@ -134,9 +157,7 @@ class Game {
           this.tutorialOverlay.classList.add("hidden");
           return;
         }
-
         if (this.currentNPC) return;
-
         if (!this.settingsMenu.classList.contains("hidden")) {
           this.settingsMenu.classList.add("hidden");
           this.isPaused = false;
@@ -149,7 +170,6 @@ class Game {
         }
       }
 
-      // 2. Logique de la touche F3 (Debug)
       if (e.code === "F3") {
         e.preventDefault();
         if (this.coordDisplay) {
@@ -158,20 +178,20 @@ class Game {
         }
       }
 
-      // 3. Logique de la touche I (Inventaire)
       if (e.key.toLowerCase() === "i") {
         if (this.currentNPC) return;
         this.book.toggle();
         this.isPaused = this.book.isOpen;
-        this.audioManager.play("book_open");
+        if (this.audioManager) this.audioManager.play("book_open");
       }
     });
 
     window.addEventListener("resize", () => this.handleResize());
-
     this.clock = new THREE.Clock();
     this.loop();
   }
+
+  // --- MÉTHODES DE LA CLASSE ---
 
   setupCamera() {
     this.frustumSize = 10;
@@ -209,12 +229,6 @@ class Game {
       );
     }
 
-    const compassUI = document.getElementById("dynamic-compass");
-    if (compassUI && compassUI.style.display !== "none") {
-      const wobble = Math.sin(Date.now() * 0.005) * 4;
-      compassUI.style.transform = `rotate(${wobble}deg)`;
-    }
-
     if (!this.isPaused) {
       this.scout.update(
         deltaTime,
@@ -223,7 +237,6 @@ class Game {
         this.audioManager,
       );
 
-      // --- CAMÉRA ---
       let targetX =
         this.camera.position.x +
         (this.scout.mesh.position.x - this.camera.position.x) * 5 * deltaTime;
@@ -232,53 +245,21 @@ class Game {
         (this.scout.mesh.position.y - this.camera.position.y) * 5 * deltaTime;
 
       const aspect = window.innerWidth / window.innerHeight;
-      const camHalfHeight = this.frustumSize / 2;
       const camHalfWidth = (this.frustumSize * aspect) / 2;
+      const camHalfHeight = this.frustumSize / 2;
 
-      const limitX = 96 - camHalfWidth;
-      const limitY = 56 - camHalfHeight;
+      this.camera.position.x = THREE.MathUtils.clamp(
+        targetX,
+        -96 + camHalfWidth,
+        96 - camHalfWidth,
+      );
+      this.camera.position.y = THREE.MathUtils.clamp(
+        targetY,
+        -56 + camHalfHeight,
+        56 - camHalfHeight,
+      );
 
-      if (limitX > 0) {
-        this.camera.position.x = THREE.MathUtils.clamp(
-          targetX,
-          -limitX,
-          limitX,
-        );
-      } else {
-        this.camera.position.x = 0;
-      }
-
-      if (limitY > 0) {
-        this.camera.position.y = THREE.MathUtils.clamp(
-          targetY,
-          -limitY,
-          limitY,
-        );
-      } else {
-        this.camera.position.y = 0;
-      }
-
-      // --- TÉLÉPORTATION ---
-      if (this.world.teleporters) {
-        const px = this.scout.mesh.position.x;
-        const py = this.scout.mesh.position.y;
-
-        for (const tp of this.world.teleporters) {
-          const dist = Math.sqrt((px - tp.x) ** 2 + (py - tp.y) ** 2);
-          if (dist < 1.0) {
-            this.audioManager.play("teleport");
-            this.world.loadMap(tp.targetMap);
-            this.scout.mesh.position.set(tp.targetX, tp.targetY, 0);
-            this.camera.position.x = tp.targetX;
-            this.camera.position.y = tp.targetY;
-            break;
-          }
-        }
-      }
-
-      // --- LOGIQUE NUIT ---
-      const isDarkZone = this.world.currentMapId === "grotte";
-      if (isDarkZone) {
+      if (this.world.currentMapId === "grotte") {
         this.lightSystem.enable();
         this.lightSystem.update(this.scout.mesh.position);
       } else {
@@ -286,24 +267,18 @@ class Game {
       }
 
       if (this.coordDisplay) {
-        const px = this.scout.mesh.position.x;
-        const py = this.scout.mesh.position.y;
-        this.coordDisplay.innerText = `X: ${px.toFixed(1)} | Y: ${py.toFixed(1)}`;
+        this.coordDisplay.innerText = `X: ${this.scout.mesh.position.x.toFixed(1)} | Y: ${this.scout.mesh.position.y.toFixed(1)}`;
       }
     }
 
-    // Gestion des dialogues
     if (this.inputs.keys.interact) {
-      if (!this.isPaused && this.nearestNPC) {
+      if (!this.isPaused && this.nearestNPC)
         this.startDialogue(this.nearestNPC);
-      }
       this.inputs.keys.interact = false;
     }
 
-    if (this.inputs.keys.enter && this.isPaused) {
-      if (this.currentNPC) {
-        this.nextStep();
-      }
+    if (this.inputs.keys.enter && this.isPaused && this.currentNPC) {
+      this.nextStep();
       this.inputs.keys.enter = false;
     }
   }
@@ -312,24 +287,19 @@ class Game {
     const range = 1.5;
     this.nearestNPC = null;
     const prompt = document.getElementById("interaction-prompt");
-
     if (this.world.npcs) {
       for (const npc of this.world.npcs) {
-        const dist = this.scout.mesh.position.distanceTo(npc.position);
-        if (dist < range) {
+        if (this.scout.mesh.position.distanceTo(npc.position) < range) {
           this.nearestNPC = npc;
           break;
         }
       }
     }
-
-    if (this.nearestNPC && !this.isPaused) {
-      prompt.style.display = "block";
-      prompt.innerText = `Appuyez sur E pour parler à ${this.nearestNPC.name}`;
-    } else {
-      if (!this.world.collectibles || this.world.collectibles.length === 0) {
-        prompt.style.display = "none";
-      }
+    if (prompt) {
+      prompt.style.display =
+        this.nearestNPC && !this.isPaused ? "block" : "none";
+      if (this.nearestNPC)
+        prompt.innerText = `Appuyez sur E pour parler à ${this.nearestNPC.name}`;
     }
   }
 
@@ -342,8 +312,7 @@ class Game {
 
     for (let i = 0; i < this.world.collectibles.length; i++) {
       const item = this.world.collectibles[i];
-      const dist = this.scout.mesh.position.distanceTo(item.position);
-      if (dist < pickupRange) {
+      if (this.scout.mesh.position.distanceTo(item.position) < pickupRange) {
         itemFound = item;
         indexFound = i;
         break;
@@ -353,17 +322,12 @@ class Game {
     if (itemFound && !this.isPaused && !this.nearestNPC) {
       prompt.style.display = "block";
       prompt.innerText = `Appuyez sur E pour ramasser : ${itemFound.name}`;
-
       if (this.inputs.keys.interact) {
-        this.book.addItem(itemFound.name, "Du bois pour le castor.", null);
-        this.audioManager.play("book_open");
+        this.book.addItem(itemFound.name, "Objet trouvé.", null);
         this.scene.remove(itemFound);
         this.world.collectibles.splice(indexFound, 1);
         this.inputs.keys.interact = false;
-        prompt.style.display = "none";
       }
-    } else if (!this.nearestNPC) {
-      prompt.style.display = "none";
     }
   }
 
@@ -387,7 +351,7 @@ class Game {
     } else {
       textElement.innerText = "Que veux-tu faire ?";
       optionsElement.innerHTML = `
-        <button onclick="window.game.handleChoice('accept')">Accepter / Donner</button>
+        <button onclick="window.game.handleChoice('accept')">Accepter</button>
         <button onclick="window.game.handleChoice('close')">Partir</button>
       `;
     }
@@ -399,43 +363,6 @@ class Game {
   }
 
   handleChoice(choice) {
-    if (choice === "accept") {
-      const npcName = this.currentNPC.name;
-      if (npcName === "Biche") {
-        this.questManager.acceptQuest("baie");
-      } else if (npcName === "Ecureuil" || npcName === "Lapin") {
-        this.questManager.acceptQuest("gland");
-      } else if (npcName === "Renard") {
-        const hasMap = this.book.inventory.find((i) => i && i.name === "Carte");
-        if (hasMap) {
-          this.questManager.acceptQuest("bousole");
-          this.book.removeItem("Carte");
-          this.questManager.completeQuest("bousole");
-          this.book.updateUI();
-        } else {
-          alert("Le Renard ricane : 'Pas de carte, pas de boussole !'");
-        }
-      } else if (npcName === "ChefScout") {
-        this.questManager.acceptQuest("scout");
-      } else if (npcName === "ScoutAmi") {
-        this.questManager.completeQuest("scout");
-        this.book.updateUI();
-      } else if (npcName === "Castor") {
-        const hasLog = this.book.inventory.find((i) => i && i.name === "Bûche");
-        if (hasLog) {
-          this.questManager.acceptQuest("chamalow");
-          this.book.removeItem("Bûche");
-          this.questManager.completeQuest("chamalow");
-          this.book.updateUI();
-          alert("Merci ! Avec ce bois, je vais pouvoir réparer mon barrage !");
-        } else {
-          alert("Je ne peux pas travailler... Trouve-moi une Bûche de bois !");
-        }
-      } else if (npcName === "Panneau") {
-        this.questManager.acceptQuest("pont");
-      }
-    }
-
     document.getElementById("dialogue-screen").style.display = "none";
     this.isPaused = false;
     this.currentNPC = null;

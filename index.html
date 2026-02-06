@@ -20,9 +20,7 @@
 
         <div class="menu-center">
             <img src="./personnage.png" alt="Character Preview" class="character-preview">
-            <button id="btn-new-game" class="btn-newgame">
-                Nouvelle Partie
-            </button>
+            <button id="btn-new-game" class="btn-newgame">Nouvelle Partie</button>
         </div>
 
         <div class="profile-badge">
@@ -46,7 +44,6 @@
                 <img src="./settings.png" alt="Icon" class="title-gear">
                 <h1>PARAMÈTRES</h1>
             </div>
-
             <div class="settings-buttons">
                 <button class="btn-newgame" id="btn-tutorial">Voir le didacticiel</button>
                 <button class="btn-newgame" id="btn-quit-game">Quitter le jeu</button>
@@ -59,6 +56,33 @@
                 <img src="./profil.png" alt="User">
             </div>
             <span class="profile-name">Titouan</span>
+        </div>
+    </div>
+
+    <div id="game-hud" class="hidden">
+        <div class="hud-bottom-left">
+            <div class="profile-badge">
+                <div class="profile-icon">
+                    <img src="./profil.png" alt="Titouan">
+                </div>
+                <span class="profile-name">Titouan</span>
+            </div>
+
+            <div class="hud-actions">
+                <div class="hud-btn-wrapper">
+                    <button id="btn-hud-inventory" class="btn-params">
+                        <img src="./sac-dos.png" alt="Inventaire">
+                    </button>
+                    <span class="key-hint">i</span>
+                </div>
+
+                <div class="hud-btn-wrapper">
+                    <button id="btn-hud-settings" class="btn-params">
+                        <img src="./settings.png" alt="Paramètres">
+                    </button>
+                    <span class="key-hint">esc</span>
+                </div>
+            </div>
         </div>
     </div>
     <canvas class="webgl"></canvas>
