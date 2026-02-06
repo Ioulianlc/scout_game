@@ -51,21 +51,24 @@
         POS: 0, 0
     </div>
 
-    <div id="mouse-coords" style="
-        position: fixed;
-        top: 10px;
-        right: 100px; /* Décalé pour ne pas gêner la boussole */
-        color: #00ffff; 
-        font-family: 'Courier New', Courier, monospace;
-        font-weight: bold;
-        font-size: 16px;
-        background: rgba(0, 0, 0, 0.5);
-        padding: 8px;
-        border-radius: 4px;
-        pointer-events: none;
-        z-index: 2000;
-    ">
-        MOUSE: 0, 0
+    
+    </div>
+    <div id="main-quest-ui" style="
+            position: absolute;
+            top: 70px; /* <--- MODIFIÉ ICI (au lieu de 20px) pour éviter le debug */
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 16px;
+            border: 2px solid #ffd700;
+            max-width: 250px;
+            pointer-events: none;
+        ">
+        <strong style="color: #ffd700;">QUÊTE PRINCIPALE</strong><br>
+        <span id="main-quest-text">Chargement...</span>
     </div>
 
     <script type="module" src="/src/main.js"></script>

@@ -1,112 +1,61 @@
-// questManager.js
 export class QuestManager {
-  constructor(game) {
-    this.game = game;
-    this.allQuests = {
-      baie: {
-        id: "baie",
-        titre: "La faim de la biche",
-        demandeur: "Mme Biche",
-        status: "En cours",
-        description: "Trouver 3 baies dans la clairière des baies.",
-        recompense: { name: "Clés", desc: "Clés de la tour.", img: null },
-        badgeId: "biche",
-      },
-      gland: {
-        id: "gland",
-        titre: "L'écureuil radin",
-        demandeur: "M. Écureuil",
-        status: "En cours",
-        description: "Ramenez 5 glands à monsieur l'écureuil.",
-        recompense: {
-          name: "Lampe",
-          desc: "Une lampe torche puissante.",
-          img: null,
-        },
-        badgeId: "ecureuil",
-      },
-      bousole: {
-        id: "bousole",
-        titre: "Le renard et la malice",
-        demandeur: "M. Renard",
-        status: "En cours",
-        description: "Échangez votre carte contre une boussole.",
-        recompense: {
-          name: "Boussole",
-          desc: "Elle pointe vers le Nord.",
-          img: "./boussole.png",
-        },
-        badgeId: "renard",
-      },
-      pont: {
-        id: "pont",
-        titre: "La réparation du pont",
-        demandeur: "Panneau",
-        status: "En cours",
-        description:
-          "Allez au camp d'urgence récupérer la hache pour couper du bois...",
-        badgeId: "arbre", // Badge de protecteur de la forêt
-      },
-      chamalow: {
-        id: "chamalow",
-        titre: "La gourmandise du castor",
-        demandeur: "Mme. Castor",
-        status: "En cours",
-        description: "Donnez les chamalows pour libérer le passage de l'eau.",
-        badgeId: "castor",
-      },
-      // --- LA QUÊTE MANQUANTE : LE RAVITAILLEMENT ---
-      scout: {
-        id: "scout",
-        titre: "Le ravitaillement",
-        demandeur: "Chef Scout",
-        status: "En cours",
-        description:
-          "Allez voir vos amis scouts pour récupérer les provisions (Chamalows).",
-        recompense: {
-          name: "Chamalow",
-          desc: "Un sachet de guimauves sucrées.",
-          img: null,
-        },
-        badgeId: "maitre",
-      },
-    };
-  }
-
-  acceptQuest(questId) {
-    const questData = this.allQuests[questId];
-    if (questData) {
-      const alreadyAccepted = this.game.book.quests.find(
-        (q) => q.id === questId,
-      );
-      if (!alreadyAccepted) {
-        this.game.book.quests.push({ ...questData });
-        this.game.book.updateUI();
-      }
+    constructor(game) {
+        this.game = game;
+        this.storyStep = 0; 
+        this.updateMainQuestUI();
     }
-  }
 
-  completeQuest(questId) {
-    const quest = this.game.book.quests.find((q) => q.id === questId);
+    updateMainQuestUI() {
+        const ui = document.getElementById("main-quest-text");
+        let text = "";
 
-    if (quest && quest.status !== "Terminée") {
-      quest.status = "Terminée";
-
-      // 1. Donne l'objet de récompense si défini
-      if (quest.recompense) {
-        this.game.book.addItem(
-          quest.recompense.name,
-          quest.recompense.desc,
-          quest.recompense.img,
-        );
-      }
-
-      // 2. Débloque le badge associé
-      if (quest.badgeId) {
-        this.game.book.unlockBadge(quest.badgeId);
-      }
-
-      this.game.book.updateUI();
+        switch (this.storyStep) {
+            case 0: text = "Trouve le Lapin, il a besoin de toi."; break;
+            case 1: text = "Rejoins la TOUR pour trouver la Carte. Appuye sur \"e\" pour la rammasser"; break;
+            case 2: text = "Trouve maintenant la Biche."; break;
+            case 3: text = "La Biche a faim : Trouve une BAIE."; break;
+            case 4: text = "Trouve Célian l'écureuil curieux."; break;
+            case 5: text = "L'écureuil veut un GLAND pour t'aider."; break;
+            case 6: text = "Trouve le Renard dans la Grotte."; break;
+            case 7: text = "Trouve vite Monsieur le Castor."; break;
+            case 8: text = "Le Castor a besoin d'une BÛCHE."; break;
+            case 9: text = "Félicitations ! Tu as aidé toute la forêt !"; break;
+        }
+        if (ui) ui.innerText = text;
     }
-  }
+
+    advanceStory() {
+        this.storyStep++;
+        this.updateMainQuestUI();
+        if(this.game.audioManager) this.game.audioManager.play('book_open');
+    }
+
+    // --- CES FONCTIONS UTILISENT MAINTENANT TON BOOK.JS ---
+
+    addQuestToBook(id, title, description) {
+        // Appelle la méthode qu'on vient d'ajouter dans book.js
+        this.game.book.addQuest(id, title, description);
+    }
+
+    completeQuestInBook(id) {
+        this.game.book.completeQuest(id);
+    }
+
+    awardBadge(name, color) {
+        // Mapping entre les noms du scénario et les IDs de ton book.js
+        let badgeId = null;
+
+        if (name === "Ami des Biches") badgeId = "biche";
+        else if (name === "Éclaireur") badgeId = "ecureuil"; // L'écureuil donne ce badge
+        else if (name === "Rusé comme un Renard") badgeId = "renard";
+        else if (name === "Bâtisseur") badgeId = "castor";
+        else if (name === "Explorateur de Tour") badgeId = "arbre"; // On utilise "arbre" pour la tour/carte
+
+        if (badgeId) {
+            this.game.book.unlockBadge(badgeId);
+            alert(`BADGE DÉBLOQUÉ : ${name}`);
+        } else {
+            console.warn("Badge ID inconnu pour :", name);
+        }
+    }
 }

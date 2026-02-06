@@ -13,6 +13,8 @@ export class VegetationGenerator {
         this.treeTexture.magFilter = THREE.NearestFilter;
         this.bushTexture = loader.load('./bush.png'); 
         this.bushTexture.magFilter = THREE.NearestFilter;
+        this.berrybushesTexture = loader.load('./berrybush.png'); 
+        this.berrybushesTexture.magFilter = THREE.NearestFilter;
         this.fireTreeTexture = loader.load('./firetree.png'); 
         this.fireTreeTexture.magFilter = THREE.NearestFilter;
 
@@ -35,6 +37,17 @@ export class VegetationGenerator {
             loader.load('./rondindebois1.png'),
             loader.load('./rondindebois2.png')
         ];
+
+        // Baies et Glands
+        this.berryTexture = loader.load('./berry.png');
+        this.berryTexture.magFilter = THREE.NearestFilter;
+        this.acornTexture = loader.load('./acorn.png');
+        this.acornTexture.magFilter = THREE.NearestFilter;
+
+        // NOUVEAU : La map au sol
+        this.mapDropTexture = loader.load('./carte.png'); 
+        this.mapDropTexture.magFilter = THREE.NearestFilter;
+        
         
         // On applique le filtre "Pixel Art" sur les 3 images d'un coup
         this.logTextures.forEach(texture => {
@@ -45,6 +58,7 @@ export class VegetationGenerator {
     // --- GÉNÉRATEURS DE ZONES ---
     generateZone(minX, maxX, minY, maxY, count) { this.generateGeneric(minX, maxX, minY, maxY, count, 'tree'); }
     generateBushes(minX, maxX, minY, maxY, count) { this.generateGeneric(minX, maxX, minY, maxY, count, 'bush'); }
+    generateBerryBushes(minX, maxX, minY, maxY, count) { this.generateGeneric(minX, maxX, minY, maxY, count, 'berrybushes'); }
     generateFireZone(minX, maxX, minY, maxY, count) { this.generateGeneric(minX, maxX, minY, maxY, count, 'fire'); }
 
     generateGeneric(minX, maxX, minY, maxY, count, type) {
@@ -59,6 +73,7 @@ export class VegetationGenerator {
             if (type === 'tree') this.plantTree(x, y);
             else if (type === 'bush') this.plantBush(x, y);
             else if (type === 'fire') this.plantFireTree(x, y);
+            else if (type === 'berrybushes') this.plantBerryBushes(x, y);
             planted++;
         }
     }
@@ -77,6 +92,7 @@ export class VegetationGenerator {
 
     plantTree(x, y) { this.createMesh(x, y, 3, 3, this.treeTexture, true); }
     plantBush(x, y) { this.createMesh(x, y, 1.5, 1.5, this.bushTexture, false); }
+    plantBerryBushes(x, y) { this.createMesh(x, y, 1.5, 1.5, this.berrybushesTexture, false); }
     plantFireTree(x, y) { this.createMesh(x, y, 3, 3, this.fireTreeTexture, true, 0xffaaaa); }
     
     plantTower(x, y) {
@@ -98,6 +114,19 @@ export class VegetationGenerator {
         this.createMesh(x, y, 2, 3, this.tentTexture, false);
         this.world.addCollider(x, y, 1, 1.5); 
     }
+    plantBerry(x, y) {
+        const mesh = this.createMesh(x, y, 0.8, 0.8, this.berryTexture, false);
+        mesh.name = "Baie"; // IMPORTANT POUR LE CODE
+        if(this.world.collectibles) this.world.collectibles.push(mesh);
+    }
+
+    plantAcorn(x, y) {
+        const mesh = this.createMesh(x, y, 0.6, 0.6, this.acornTexture, false);
+        mesh.name = "Gland"; // IMPORTANT
+        if(this.world.collectibles) this.world.collectibles.push(mesh);
+    }
+
+    
 
     // --- NOUVEAU : PLANTER UNE BÛCHE ALÉATOIRE ---
     plantLog(x, y) {
@@ -115,6 +144,18 @@ export class VegetationGenerator {
         if (this.world.collectibles) {
             this.world.collectibles.push(mesh);
         }
+        
+    }
+
+    plantQuestMap(x, y) {
+    // On crée l'image au sol (taille 1x1 par exemple)
+    const mesh = this.createMesh(x, y, 1, 1, this.mapDropTexture, false);
+
+    // TRÈS IMPORTANT : On lui donne un nom unique pour le retrouver dans game.js
+    mesh.name = "QuestMapObject"; 
+
+    // On NE l'ajoute PAS à this.world.collectibles
+    // car on veut gérer le ramassage manuellement via la quête du Lapin.
     }
 
     // --- UTILITAIRE ---

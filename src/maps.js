@@ -48,6 +48,6 @@ export const maps = {
                 targetX: -75, targetY: -3
             }   
         ],
-        hasNPCs: false
+        hasNPCs: true
     }
 };

@@ -40,7 +40,7 @@ class Game {
     this.book = new Book(this);
     this.questManager = new QuestManager(this);
 
-    this.book.addItem("Carte", "La carte de la forêt.", null);
+    
 
     // --- LUMIÈRE ---
     this.lightSystem = new LightSystem(this.scene);
@@ -86,7 +86,7 @@ class Game {
   }
 // -------------------------------------------------------------------------------------------------------------------------------------------------
   setupCamera() {
-    this.frustumSize = 10; 
+    this.frustumSize = 100; 
     this.camera = new THREE.OrthographicCamera(0, 0, 0, 0, 0.1, 100);
     this.camera.position.set(0, 0, 10);
     this.camera.lookAt(0, 0, 0);
@@ -112,6 +112,7 @@ class Game {
 
   update(deltaTime) {
     this.checkProximity();
+    this.checkSpecialInteractions()
 
     // --- AJOUT : On vérifie les bûches à ramasser ---
     this.checkCollectibles();
@@ -237,6 +238,58 @@ class Game {
       }
     }
   }
+  // DANS GAME.JS, AJOUTE CETTE MÉTHODE :
+// DANS src/game.js
+
+  checkSpecialInteractions() {
+    // Si on est à l'étape 1 (On cherche la carte)
+    if (this.questManager.storyStep === 1) {
+        
+        // --- MODIFICATION ICI : NOUVELLES COORDONNÉES (-62, -32) ---
+        const targetPos = new THREE.Vector3(-62, -32, 0);
+        // -----------------------------------------------------------
+
+        const dist = this.scout.mesh.position.distanceTo(targetPos);
+        const prompt = document.getElementById("interaction-prompt");
+
+        // J'ai mis 3.0 de distance pour que ce soit confortable
+        if (dist < 3.0) { 
+            prompt.style.display = "block";
+            prompt.innerText = "Appuyez sur E pour ramasser la Carte"; // Texte plus précis
+
+            if (this.inputs.keys.interact) {
+                // C'est CETTE action qui valide la mission
+                this.audioManager.play('book_open');
+
+                // --- NOUVEAU : SUPPRESSION VISUELLE ---
+                // On cherche l'objet par son nom (défini dans vegetation.js)
+                const mapObject = this.scene.getObjectByName("QuestMapObject");
+                if (mapObject) {
+                    this.scene.remove(mapObject); // On l'enlève de la scène
+                }
+                // --------------------------------------
+                
+                // 1. On donne l'objet
+                this.book.addItem("Carte", "Carte de la forêt", null);
+                
+                // 2. On donne le badge
+                this.questManager.awardBadge("Explorateur de Tour", "#cd7f32");
+                
+                // 3. On valide la quête dans le livre
+                this.questManager.completeQuestInBook("lapin_map");
+                
+                // 4. On passe à l'étape suivante (Trouver la Biche)
+                this.questManager.advanceStory(); 
+                
+                // Reset touche et prompt
+                this.inputs.keys.interact = false;
+                prompt.style.display = "none";
+            }
+            return true; 
+        }
+    }
+    return false;
+  }
 
   // --- NOUVEAU : GESTION DU RAMASSAGE (BÛCHES) ---
   checkCollectibles() {
@@ -321,48 +374,122 @@ class Game {
   handleChoice(choice) {
     if (choice === "accept") {
       const npcName = this.currentNPC.name;
+      const step = this.questManager.storyStep; // Raccourci
 
-      if (npcName === "Biche") {
-        this.questManager.acceptQuest("baie");
-      } else if (npcName === "Ecureuil" || npcName === "Lapin") {
-        this.questManager.acceptQuest("gland");
-      } else if (npcName === "Renard") {
-        const hasMap = this.book.inventory.find((i) => i && i.name === "Carte");
-        if (hasMap) {
-          this.questManager.acceptQuest("bousole");
-          this.book.removeItem("Carte");
-          this.questManager.completeQuest("bousole");
-          this.book.updateUI();
-        } else {
-          alert("Le Renard ricane : 'Pas de carte, pas de boussole !'");
-        }
-      } else if (npcName === "ChefScout") {
-        this.questManager.acceptQuest("scout");
-      } else if (npcName === "ScoutAmi") {
-        this.questManager.completeQuest("scout");
-        this.book.updateUI();
-      } else if (npcName === "Castor") {
-        
-        // --- MISE A JOUR CASTOR : BÛCHE ---
-        const hasLog = this.book.inventory.find(
-          (i) => i && i.name === "Bûche",
-        );
-        if (hasLog) {
-          this.questManager.acceptQuest("chamalow"); // On garde l'ID de quête existant pour simplifier
-          this.book.removeItem("Bûche");
-          this.questManager.completeQuest("chamalow");
-          this.book.updateUI();
-          alert("Merci ! Avec ce bois, je vais pouvoir réparer mon barrage !");
-        } else {
-          alert("Je ne peux pas travailler... Trouve-moi une Bûche de bois !");
-        }
-        // ----------------------------------
+      // --- 1. LAPIN ---
+      if (npcName === "Lapin") {
+          if (step === 0) {
+              // Début de la quête
+              this.questManager.addQuestToBook("lapin_map", "Carte de la forêt", "Rejoins la tour (-59, -33) pour acquérir la carte.");
+              this.questManager.advanceStory(); // Step 1
+              alert("Le Lapin : 'Va vite à la tour chercher la carte !'");
+          } else {
+              alert("Le Lapin : 'Dépêche-toi d'aller à la tour !'");
+          }
+      }
 
-      } else if (npcName === "Panneau") {
-        this.questManager.acceptQuest("pont");
+      // --- 2. BICHE ---
+      else if (npcName === "biche") { // Attention à la majuscule dans ton code initNPCs
+          if (step === 2) {
+              this.questManager.addQuestToBook("biche_baie", "La biche gourmande", "Trouve une baie pour la biche.");
+              this.questManager.advanceStory(); // Step 3 (Cherche baie)
+          } 
+          else if (step === 3) {
+              // Vérifier si on a la baie
+              const hasBerry = this.book.inventory.find(i => i.name === "Baie"); // Assure toi que l'item s'appelle "Baie"
+              if (hasBerry) {
+                  this.book.removeItem("Baie");
+                  this.questManager.completeQuestInBook("biche_baie");
+                  this.questManager.awardBadge("Ami des Biches", "silver");
+                  this.questManager.advanceStory(); // Step 4 (Trouve Ecureuil)
+                  alert("Biche : 'Merci ! C'était délicieux.'");
+              } else {
+                  alert("Biche : 'Je meurs de faim... Trouve une baie !'");
+              }
+          }
+      }
+
+      // --- 3. ECUREUIL ---
+      else if (npcName === "Ecureuil") {
+          if (step === 4) {
+              this.questManager.addQuestToBook("ecureuil_gland", "Célian l'écureuil gourmand", "Trouve un gland.");
+              this.questManager.advanceStory(); // Step 5 (Cherche Gland)
+          }
+          else if (step === 5) {
+               const hasAcorn = this.book.inventory.find(i => i.name === "Gland");
+               if (hasAcorn) {
+                   this.book.removeItem("Gland");
+                   
+                   // Récompenses
+                   this.book.addItem("Torche", "Pour voir dans le noir", null);
+                   this.questManager.awardBadge("Éclaireur", "orange");
+                   this.questManager.completeQuestInBook("ecureuil_gland");
+                   
+                   // Débloquer la grotte !
+                   this.world.unlockCave(); 
+                   
+                   this.questManager.advanceStory(); // Step 6 (Trouve Renard)
+                   alert("Ecureuil : 'Tiens, prends cette torche et file à la grotte !'");
+               } else {
+                   alert("Ecureuil : 'Pas de gland, pas de torche !'");
+               }
+          }
+      }
+
+      // --- 4. RENARD (Dans la grotte) ---
+     // --- 4. RENARD (Dans la grotte) ---
+      else if (npcName === "Renard") {
+          if (step === 6) {
+              // On vérifie si le joueur a la carte (note le '&&' pour être sûr que l'item n'est pas null)
+              const hasMap = this.book.inventory.find(i => i && i.name === "Carte");
+              
+              if (hasMap) {
+                  // 1. ON SUPPRIME LA CARTE
+                  // Cela va automatiquement cacher la mini-map du widget
+                  this.book.removeItem("Carte");
+                  
+                  // 2. ON AJOUTE LA BOUSSOLE
+                  // Cela va automatiquement afficher le png boussole dans le widget !
+                  // (Tu peux mettre null pour l'image d'inventaire si tu n'en as pas, ou mettre une icône)
+                  this.book.addItem("Boussole", "Indique le Nord.", null); 
+                  
+                  // 3. Récompenses & Progression
+                  this.questManager.awardBadge("Rusé comme un Renard", "red");
+                  this.questManager.addQuestToBook("renard_done", "Renard trouvé", "Fait.");
+                  this.questManager.completeQuestInBook("renard_done");
+                  
+                  this.questManager.advanceStory(); // Step 7
+                  
+                  alert("Renard : 'Marché conclu ! Voici ta boussole. Elle t'aidera à t'orienter sans carte.'");
+              } else {
+                  alert("Renard : 'Il me faut ta carte ! Pas de carte, pas de boussole !'");
+              }
+          }
+      }
+
+      // --- 5. CASTOR ---
+      else if (npcName === "Castor") {
+          if (step === 7) {
+               this.questManager.addQuestToBook("castor_pont", "Maître constructeur", "Construit un pont (trouve une bûche).");
+               this.questManager.advanceStory(); // Step 8 (Cherche Bûche)
+          }
+          else if (step === 8) {
+              const hasLog = this.book.inventory.find(i => i.name === "Bûche");
+              if (hasLog) {
+                  this.book.removeItem("Bûche"); // Il la donne
+                  this.questManager.completeQuestInBook("castor_pont");
+                  this.questManager.awardBadge("Bâtisseur", "brown");
+                  
+                  this.questManager.advanceStory(); // Step 9 (FIN)
+                  alert("Castor : 'Parfait ! Je peux réparer le pont. Tu es le héros de la forêt !'");
+              } else {
+                  alert("Castor : 'Pas de bras, pas de chocolat... euh pas de bois, pas de pont !'");
+              }
+          }
       }
     }
-
+    
+    // Fermeture dialogue
     document.getElementById("dialogue-screen").style.display = "none";
     this.isPaused = false;
     this.currentNPC = null;

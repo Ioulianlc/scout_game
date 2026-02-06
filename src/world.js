@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { LevelBuilder } from "./tools.js";
 import { maps } from "./maps.js"; 
-// N'oublie pas cet import !
 import { VegetationGenerator } from "./vegetation.js"; 
 
 export class World {
@@ -9,6 +8,7 @@ export class World {
         this.scene = scene;
         this.camera = camera;
         this.scout = scout;
+        this.caveBlocker = null;
 
         this.colliders = []; 
         this.teleporters = []; 
@@ -27,7 +27,6 @@ export class World {
         this.loadMap("exterieur");
     }
 
-    // --- C'EST ICI QUE DOIT ÊTRE LA LOGIQUE DES ARBRES ---
     loadMap(mapId) {
         console.log(`🌍 Chargement de la carte : ${mapId}`);
 
@@ -39,7 +38,7 @@ export class World {
             return;
         }
 
-        // 1. NETTOYAGE (Arbres, murs, NPCs...)
+        // 1. NETTOYAGE
         this.clearLevel();
 
         // 2. SPAWN
@@ -69,77 +68,111 @@ export class World {
         });
         this.teleporters = data.teleporters || [];
 
-        // 5. NPCS
+        // 5. NPCS (On passe l'ID de la map pour filtrer)
         if (data.hasNPCs) {
-            this.initNPCs();
+            this.initNPCs(mapId);
         }
 
-        // 6. GÉNÉRATION DES ARBRES (C'est ici la bonne place !)
-        // On vérifie le mapId qui est passé en argument de la fonction loadMap
+        // 6. GÉNÉRATION DES ARBRES & OBJETS SPÉCIAUX
         if (mapId === "exterieur") {
             const veg = new VegetationGenerator(this.scene, this);
 
-            // veg.generateZone(min x,max x, min y, max y, nb arbre);
-            // Parcelle 1
+            // --- LE MUR QUI BLOQUE LA GROTTE ---
+            // Coordonnées pour bloquer l'accès (-75, -2, largeur 4)
+            this.caveBlocker = this.addCollider(-75, -2, 4, 1);
+
+            // ZONES VÉGÉTATION
             veg.generateZone(-33, -10, -26, -6, 70);
-            // Parcelle 2
             veg.generateZone(-8, 4, -26, -4, 40);
-            // Parcelle 3
             veg.generateZone(-6, 7, -25, -19, 60);
-            // Parcelle 4
             veg.generateZone( 6, 21, -16, -6, 60);
-            // Parcelle 5
             veg.generateZone( 10, 30, -37, -19, 60);
-            // Parcelle 6
             veg.generateZone( 9, 35, -55, -39, 60);
-            // Parcelle 7
             veg.generateZone( -7, 7, -52, -28, 60);
-            // Parcelle 8
             veg.generateZone( -31, 10, -44, -28, 60);
-            // Parcelle 9
             veg.generateZone( -43, -34, -44, -27, 60);
-            // Parcelle 10
             veg.generateZone( -95, -10, -55, -47, 200);
-            // Parcelle 11
             veg.generateZone( -7, 7, -55, -55, 20);
 
-            // Parcelles entouré de bush
             veg.generateZone( -46, -38, -15, -12, 20);
             veg.generateZone( -20, -14, 4, -1, 4);
             veg.generateZone( -4, 25, 45, 48, 60);
 
-            // Bush
+            // BUSHES
             veg.generateBushes(-28, -23, 47, 49, 50);
-            veg.generateBushes(-5, 34, 0, 42, 300);
+            veg.generateBushes(-5, 34, 0, 42, 150);
             veg.generateBushes(-26, 50, -11, -1, 40);
 
-            // Firetree
+            // BerryBush
+            veg.generateBerryBushes(-68, -61, 41, 44, 50);
+            veg.generateBerryBushes(-6, 36, 1, 43, 150);
+
+            // FEU
             veg.generateFireZone(54, 95, 6, 55, 180);
             veg.generateFireZone(39, 52, 5, 14, 20);
 
-            // Tower
-            veg.plantTower(-59, -33);
+            // --- OBJETS DE QUÊTE & UNIQUES ---
+            veg.plantTower(-59, -33);       // Tour
+            veg.plantSacredTree(-28, 45);   // Arbre Sacré
+            veg.plantCampfire(-28, 42);     // Feu de camp
 
-            // Sacredtree
-            veg.plantSacredTree(-28, 45);
-
-            // Camp fire
-            veg.plantCampfire(-28, 42);
-
-            // Tente
+            // --- NOUVEAU : PLACER LA MAP AU SOL ---
+            veg.plantQuestMap(-62, -32);
+            
+            // Tentes
             veg.plantTent(-35, 41);
             veg.plantTent(-22, 48);
             veg.plantTent(-31, 50);
 
-            // Buche
-            veg.plantLog(-31, 43);
+            // Objets à ramasser
+            veg.plantLog(-31, 43);   // Bûche
+            veg.plantBerry(24, 12); // Baie (pour la Biche)
+            veg.plantBerry(29, 37); // Baie (pour la Biche)
+            veg.plantBerry(3, 24); // Baie (pour la Biche)
+            veg.plantBerry(-81, -29); // Baie (pour la Biche)
+            veg.plantBerry(13, 37); // Baie (pour la Biche)
+            veg.plantAcorn(27, -55); // Gland (pour l'Écureuil)
+            veg.plantAcorn(14, -26); // Gland (pour l'Écureuil)
+            veg.plantAcorn(-94, -44); // Gland (pour l'Écureuil)
+            veg.plantAcorn(5, -25); // Gland (pour l'Écureuil)
+            veg.plantAcorn(-22, -39); // Gland (pour l'Écureuil)
+        }
+        
+    }
 
-            
+    // --- GESTION DES NPCS SELON LA CARTE ---
+    initNPCs(mapId) {
+        // CAS 1 : EXTÉRIEUR
+        if (mapId === "exterieur") {
+            this.addNPC(
+                'Lapin', -27, 28, './lapindebout.png', 
+                ['./lapindialogue.png', 'Je vois que tu es perdu !', 'Va voir la tour de guet pour la carte.']
+            );
+            this.addNPC(
+                'biche', -64, 42, './bichedebout.png',
+                ['./bichedialogue.png', 'J\'ai très faim !', 'Trouve-moi une baie s\'il te plaît.']
+            );
+            this.addNPC(
+                'Ecureuil', -79, -6, './ecureuildebout.png',
+                ['./ecureuildialogue.png', 'Si tu veux entrer dans la grotte...', 'Il te faudra ma lampe torche !']
+            );
+            this.addNPC(
+                'Castor', 52, -12, './castordebout.png',
+                ['./castorspeek.png', 'Aide-moi à réparer mon pont !']
+            );
+        }
+
+        // CAS 2 : GROTTE
+        if (mapId === "grotte") {
+            // Le Renard est UNIQUEMENT ici
+            this.addNPC(
+                'Renard', -26, 29, './renarddebout.png',
+                ['./renarddialogue.png', 'Miam un humain !', 'Donne-moi ta carte et je te donnerai une boussole.']
+            );
         }
     }
 
     clearLevel() {
-        // Supprime le sol
         if (this.currentMapMesh) {
             this.scene.remove(this.currentMapMesh);
             this.currentMapMesh.geometry.dispose();
@@ -147,28 +180,36 @@ export class World {
             this.currentMapMesh = null;
         }
 
-        // Supprime les arbres
         if (this.vegetation) {
             this.vegetation.forEach(tree => {
                 this.scene.remove(tree);
                 if (tree.geometry) tree.geometry.dispose();
                 if (tree.material) tree.material.dispose();
             });
-            this.vegetation = []; // Vide la liste
+            this.vegetation = []; 
         }
 
-        // Vide la liste de collectable
         this.collectibles = [];
-
-        // Vide les listes de collisions
         this.colliders = [];
         this.teleporters = [];
 
-        // Supprime les NPCs
         this.npcs.forEach(npc => {
             this.scene.remove(npc.mesh);
         });
         this.npcs = [];
+    }
+
+    unlockCave() {
+        if (this.caveBlocker) {
+            if (this.caveBlocker.helper) this.scene.remove(this.caveBlocker.helper);
+            
+            const index = this.colliders.indexOf(this.caveBlocker.box);
+            if (index > -1) {
+                this.colliders.splice(index, 1);
+            }
+            this.caveBlocker = null;
+            console.log("🔓 Grotte ouverte !");
+        }
     }
 
     addCollider(x, y, w, h) {
@@ -179,38 +220,12 @@ export class World {
         );
         this.colliders.push(box);
         
+        let helper = null;
         if (this.debugMode) {
-            const helper = new THREE.Box3Helper(box, 0xff0000);
+            helper = new THREE.Box3Helper(box, 0xff0000);
             this.scene.add(helper);
         }
-    }
-
-    initNPCs() {
-        // lapin
-        this.addNPC(
-            'Lapin', -40, 48, './lapindebout.png', 
-            ['./lapindialogue.png', 'Je vois que tu ne sais pas où tu est !', 'je peux t\aider à trouver ton chemin il te suffit de trouver la carte du garde forestier dans sa tour de guet. ']
-        );
-        // biche
-        this.addNPC(
-            'biche', -40, 46, './bichedebout.png',
-            ['./bichedialogue.png', 'Hey salut jeune homme, j\'ai très faim !', 'peut tu trouver des baies pour moi je n\'en trouve plus !']
-        );
-        // ecureuil
-        this.addNPC(
-            'Ecureuil', -40, 42, './ecureuildebout.png',
-            ['./ecureuildialogue.png', 'Salut jeune scout, est-tu assez brave pour rentrer dans cette grotte sombre et trouver Monsieur le renard !', 'Si oui prend ma lampe torche tu en aura besoin !']
-        );
-        // renard
-        this.addNPC(
-            'Renard', -43, 48, './renarddebout.png',
-            ['./renarddialogue.png', 'Hummmmmmmmmm yummy un humain !','Je suppose que tu veux savoir ou est le castor !','Donne moi ta carte je te donnerai une bousole pour le trouver il se trouve...............','au nord............ à non peut être au sud dans la forêt, débrouille toi tu est un aventurier NON !']
-        );
-        // castor
-        this.addNPC(
-            'Castor', -43, 45, './castordebout.png',
-            ['./castordialogue.png', 'Hey Ho jeune Boy Scout aide moi à réparer mon pont pour que je puisse t_aider à eteindre le FEU !']
-        );
+        return { box, helper }; 
     }
 
     addNPC(name, x, y, texturePath, dialogueData) {
