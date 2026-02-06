@@ -12,6 +12,8 @@ class Game {
     // Gestion du lancement du jeu
     const startButton = document.getElementById("btn-new-game");
     const menuElement = document.getElementById("main-menu");
+    this.mainMenu = menuElement;
+    this.settingsMenu = document.getElementById("settings-menu");
 
     startButton.addEventListener("click", () => {
       menuElement.classList.add("hidden");
@@ -19,6 +21,35 @@ class Game {
       if (this.audioManager) {
         this.audioManager.playMusic("forest_theme", 0.3);
       }
+    });
+
+    document.getElementById("btn-settings").addEventListener("click", () => {
+      this.mainMenu.classList.add("hidden");
+      this.settingsMenu.classList.remove("hidden");
+      this.isPaused = true;
+    });
+
+    document.getElementById("btn-back").addEventListener("click", () => {
+      this.settingsMenu.classList.add("hidden");
+      this.mainMenu.classList.remove("hidden");
+    });
+
+    // Quitter la partie (depuis le menu paramètres)
+    document.getElementById("btn-quit-match").addEventListener("click", () => {
+      this.settingsMenu.classList.add("hidden"); // Cache les paramètres
+      this.mainMenu.classList.remove("hidden"); // Affiche le menu principal
+      this.isPaused = true; // Garde le jeu en pause
+    });
+
+    // Quitter le jeu (souvent la même action sur navigateur)
+    document.getElementById("btn-quit-game").addEventListener("click", () => {
+      // Si tu veux simplement retourner au menu :
+      this.settingsMenu.classList.add("hidden");
+      this.mainMenu.classList.remove("hidden");
+      this.isPaused = true;
+
+      // Optionnel : Tu peux aussi recharger la page pour tout remettre à zéro
+      // window.location.reload();
     });
 
     this.canvas = document.querySelector("canvas.webgl");
@@ -32,7 +63,6 @@ class Game {
     this.scene.background = new THREE.Color("#3b7d4f");
 
     this.setupCamera();
-
     this.inputs = new Inputs();
 
     // --- AUDIO ---
@@ -48,14 +78,11 @@ class Game {
     );
 
     this.scout = new Scout(this.scene);
-
-    // C'est ici que la végétation est créée maintenant (dans le World)
     this.world = new World(this.scene, this.camera, this.scout);
 
     // --- LIVRE & QUÊTES ---
     this.book = new Book(this);
     this.questManager = new QuestManager(this);
-
     this.book.addItem("Carte", "La carte de la forêt.", null);
 
     // --- LUMIÈRE ---
@@ -69,15 +96,30 @@ class Game {
       maxY: 30,
     };
 
-    // --- DIALOGUES ---
-    this.isPaused = false;
+    // --- ÉTAT INITIAL ---
+    this.isPaused = true; // On commence en pause pour le menu
     this.currentNPC = null;
     this.dialogueIndex = 0;
-
-    // --- DEBUG & UI ---
     this.coordDisplay = document.getElementById("debug-coords");
 
+    // --- ÉCOUTEURS CLAVIER ---
     window.addEventListener("keydown", (e) => {
+      // LOGIQUE ECHAP (Placée ici, là où 'e' existe !)
+      if (e.key === "Escape") {
+        if (this.currentNPC) return;
+
+        if (!this.settingsMenu.classList.contains("hidden")) {
+          this.settingsMenu.classList.add("hidden");
+          this.isPaused = false;
+        } else if (!this.mainMenu.classList.contains("hidden")) {
+          this.mainMenu.classList.add("hidden");
+          this.settingsMenu.classList.remove("hidden");
+        } else {
+          this.settingsMenu.classList.remove("hidden");
+          this.isPaused = true;
+        }
+      }
+
       if (e.code === "F3") {
         e.preventDefault();
         if (this.coordDisplay) {
@@ -90,7 +132,6 @@ class Game {
         if (this.currentNPC) return;
         this.book.toggle();
         this.isPaused = this.book.isOpen;
-        // Son inventaire
         this.audioManager.play("book_open");
       }
     });
@@ -128,10 +169,7 @@ class Game {
 
   update(deltaTime) {
     this.checkProximity();
-
-    // --- AJOUT : On vérifie les bûches à ramasser ---
     this.checkCollectibles();
-    // ------------------------------------------------
 
     if (this.book) {
       this.book.updatePlayerPositionOnMap(
@@ -197,9 +235,7 @@ class Game {
         for (const tp of this.world.teleporters) {
           const dist = Math.sqrt((px - tp.x) ** 2 + (py - tp.y) ** 2);
           if (dist < 1.0) {
-            // Son téléportation
             this.audioManager.play("teleport");
-
             this.world.loadMap(tp.targetMap);
             this.scout.mesh.position.set(tp.targetX, tp.targetY, 0);
             this.camera.position.x = tp.targetX;
@@ -211,7 +247,6 @@ class Game {
 
       // --- LOGIQUE NUIT ---
       const isDarkZone = this.world.currentMapId === "grotte";
-
       if (isDarkZone) {
         this.lightSystem.enable();
         this.lightSystem.update(this.scout.mesh.position);
@@ -242,8 +277,6 @@ class Game {
     }
   }
 
-  // --- INTERACTION ---
-
   checkProximity() {
     const range = 1.5;
     this.nearestNPC = null;
@@ -263,28 +296,22 @@ class Game {
       prompt.style.display = "block";
       prompt.innerText = `Appuyez sur E pour parler à ${this.nearestNPC.name}`;
     } else {
-      // Petite astuce : on ne cache le texte que si on n'a pas non plus d'objet à ramasser
-      // (sinon le texte de la bûche clignoterait)
       if (!this.world.collectibles || this.world.collectibles.length === 0) {
         prompt.style.display = "none";
       }
     }
   }
 
-  // --- NOUVEAU : GESTION DU RAMASSAGE (BÛCHES) ---
   checkCollectibles() {
     if (!this.world.collectibles) return;
-
     const pickupRange = 1.5;
     const prompt = document.getElementById("interaction-prompt");
     let itemFound = null;
     let indexFound = -1;
 
-    // On regarde si on est proche d'un objet
     for (let i = 0; i < this.world.collectibles.length; i++) {
       const item = this.world.collectibles[i];
       const dist = this.scout.mesh.position.distanceTo(item.position);
-
       if (dist < pickupRange) {
         itemFound = item;
         indexFound = i;
@@ -292,30 +319,19 @@ class Game {
       }
     }
 
-    // Si on trouve un objet et qu'on n'est pas déjà en dialogue
     if (itemFound && !this.isPaused && !this.nearestNPC) {
       prompt.style.display = "block";
       prompt.innerText = `Appuyez sur E pour ramasser : ${itemFound.name}`;
 
       if (this.inputs.keys.interact) {
-        // 1. Ajouter à l'inventaire
         this.book.addItem(itemFound.name, "Du bois pour le castor.", null);
-
-        // 2. Son
         this.audioManager.play("book_open");
-
-        // 3. Supprimer visuellement
         this.scene.remove(itemFound);
-
-        // 4. Supprimer de la liste logique
         this.world.collectibles.splice(indexFound, 1);
-
         this.inputs.keys.interact = false;
         prompt.style.display = "none";
       }
-    }
-    // Important : ne pas cacher le prompt si c'est un PNJ qui l'utilise
-    else if (!this.nearestNPC) {
+    } else if (!this.nearestNPC) {
       prompt.style.display = "none";
     }
   }
@@ -354,7 +370,6 @@ class Game {
   handleChoice(choice) {
     if (choice === "accept") {
       const npcName = this.currentNPC.name;
-
       if (npcName === "Biche") {
         this.questManager.acceptQuest("baie");
       } else if (npcName === "Ecureuil" || npcName === "Lapin") {
@@ -375,10 +390,9 @@ class Game {
         this.questManager.completeQuest("scout");
         this.book.updateUI();
       } else if (npcName === "Castor") {
-        // --- MISE A JOUR CASTOR : BÛCHE ---
         const hasLog = this.book.inventory.find((i) => i && i.name === "Bûche");
         if (hasLog) {
-          this.questManager.acceptQuest("chamalow"); // On garde l'ID de quête existant pour simplifier
+          this.questManager.acceptQuest("chamalow");
           this.book.removeItem("Bûche");
           this.questManager.completeQuest("chamalow");
           this.book.updateUI();
@@ -386,7 +400,6 @@ class Game {
         } else {
           alert("Je ne peux pas travailler... Trouve-moi une Bûche de bois !");
         }
-        // ----------------------------------
       } else if (npcName === "Panneau") {
         this.questManager.acceptQuest("pont");
       }
