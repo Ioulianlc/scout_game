@@ -84,7 +84,7 @@ class Game {
     this.clock = new THREE.Clock();
     this.loop();
   }
-
+// -------------------------------------------------------------------------------------------------------------------------------------------------
   setupCamera() {
     this.frustumSize = 10; 
     this.camera = new THREE.OrthographicCamera(0, 0, 0, 0, 0.1, 100);

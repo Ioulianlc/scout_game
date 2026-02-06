@@ -186,20 +186,30 @@ export class World {
     }
 
     initNPCs() {
-        // Renard
+        // lapin
         this.addNPC(
-            'Renard', 2, 0, './renarddialogue.png', 
-            ['./renarddialogue.png', 'Merci d\'avoir éteint le feu !', 'Tu es un vrai héros.']
+            'Lapin', -40, 48, './lapindebout.png', 
+            ['./lapindialogue.png', 'Je vois que tu ne sais pas où tu est !', 'je peux t\aider à trouver ton chemin il te suffit de trouver la carte du garde forestier dans sa tour de guet. ']
+        );
+        // biche
+        this.addNPC(
+            'biche', -40, 46, './bichedebout.png',
+            ['./bichedialogue.png', 'Hey salut jeune homme, j\'ai très faim !', 'peut tu trouver des baies pour moi je n\'en trouve plus !']
         );
         // ecureuil
         this.addNPC(
-            'Ecureuil', -2, 0, './ecureuildialogue.png',
-            ['./ecureuildialogue.png', 'Attention, ça brûle par là-bas !', 'Vite, va chercher de l\'aide !']
+            'Ecureuil', -40, 42, './ecureuildebout.png',
+            ['./ecureuildialogue.png', 'Salut jeune scout, est-tu assez brave pour rentrer dans cette grotte sombre et trouver Monsieur le renard !', 'Si oui prend ma lampe torche tu en aura besoin !']
         );
-        // Castor
+        // renard
         this.addNPC(
-            'Castor', 0, 2, './castorspeek.png',
-            ['./castorspeek.png', 'Salut jeune scout, tu est bien brave pour être arrivé jusqu\'ici !']
+            'Renard', -43, 48, './renarddebout.png',
+            ['./renarddialogue.png', 'Hummmmmmmmmm yummy un humain !','Je suppose que tu veux savoir ou est le castor !','Donne moi ta carte je te donnerai une bousole pour le trouver il se trouve...............','au nord............ à non peut être au sud dans la forêt, débrouille toi tu est un aventurier NON !']
+        );
+        // castor
+        this.addNPC(
+            'Castor', -43, 45, './castordebout.png',
+            ['./castordialogue.png', 'Hey Ho jeune Boy Scout aide moi à réparer mon pont pour que je puisse t_aider à eteindre le FEU !']
         );
     }
 
