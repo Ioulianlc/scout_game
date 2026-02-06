@@ -49,7 +49,7 @@ export class Scout {
 
     // FUSION : On utilise la vitesse de la branche secondaire (plus réaliste)
     // Si tu veux revenir au mode "debug rapide", remets 15 ici.
-    this.speed = 25;
+    this.speed = 6;
     
     this.collider = new THREE.Box3();
   }
