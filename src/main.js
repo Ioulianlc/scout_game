@@ -29,6 +29,26 @@ class Game {
       this.isPaused = true;
     });
 
+    // Récupération du didacticiel
+    this.tutorialOverlay = document.getElementById("tutorial-overlay");
+    const btnTutorial = document.getElementById("btn-tutorial");
+
+    // Ouvrir le didacticiel
+    if (btnTutorial) {
+      btnTutorial.addEventListener("click", () => {
+        this.tutorialOverlay.classList.remove("hidden");
+      });
+    }
+
+    // Fermer au clic sur le fond noir
+    if (this.tutorialOverlay) {
+      this.tutorialOverlay.addEventListener("click", (e) => {
+        if (e.target === this.tutorialOverlay) {
+          this.tutorialOverlay.classList.add("hidden");
+        }
+      });
+    }
+
     document.getElementById("btn-back").addEventListener("click", () => {
       this.settingsMenu.classList.add("hidden");
       this.mainMenu.classList.remove("hidden");
@@ -104,8 +124,17 @@ class Game {
 
     // --- ÉCOUTEURS CLAVIER ---
     window.addEventListener("keydown", (e) => {
-      // LOGIQUE ECHAP (Placée ici, là où 'e' existe !)
+      // 1. Logique de la touche Echap
       if (e.key === "Escape") {
+        // PRIORITÉ : Si le didacticiel est ouvert, on ne ferme que lui
+        if (
+          this.tutorialOverlay &&
+          !this.tutorialOverlay.classList.contains("hidden")
+        ) {
+          this.tutorialOverlay.classList.add("hidden");
+          return;
+        }
+
         if (this.currentNPC) return;
 
         if (!this.settingsMenu.classList.contains("hidden")) {
@@ -120,6 +149,7 @@ class Game {
         }
       }
 
+      // 2. Logique de la touche F3 (Debug)
       if (e.code === "F3") {
         e.preventDefault();
         if (this.coordDisplay) {
@@ -128,6 +158,7 @@ class Game {
         }
       }
 
+      // 3. Logique de la touche I (Inventaire)
       if (e.key.toLowerCase() === "i") {
         if (this.currentNPC) return;
         this.book.toggle();

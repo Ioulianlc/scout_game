@@ -205,3 +205,31 @@ body {
   align-items: center;
   z-index: 110;
 }
+
+/**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/ /**/
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6); /* Fond sombre transparent */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200; /* Au-dessus des paramètres */
+}
+
+.popup-content {
+  max-width: 90%;
+  max-height: 90%;
+  position: relative;
+}
+
+.guide-img {
+  width: 100%;
+  height: auto;
+  border: 4px solid #8b7355;
+  border-radius: 10px;
+}
